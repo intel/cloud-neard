@@ -12,6 +12,7 @@
 		recordContentText = document.getElementById("recordContentText");
 		// init NFC global objects
 		adapter = tizen.nfc.getDefaultAdapter();
+		adapter.setPowered(true);
 		// initial state with tag reading disabled
 		readNFCTag(false);
 	}
@@ -51,10 +52,11 @@
 		nfcTag.readNDEF(logMessage);
 	}
 	
+
     // Manage NFC Tag reading
     function readNFCTag(enabled) {
     	if (enabled) {
-    		adapter.setTagListener(readOnAttach);
+    		adapter.setTagListener({onattach: readOnAttach, ondetach: function(){outLog.innerHTML += "<br><b>Tag was read, detached</b><br>";}});
     		document.tagManagement.tagListener[0].checked="true";
     	}
     	else {
@@ -85,15 +87,15 @@
     // Manage NFC Tag writing
     function writeRecordURL(content) {
     	readNFCTag(false);
-    	var record = new NDEFRecordURI(content);
-		messageToWrite = new NDEFMessage([record]);
-		adapter.setTagListener(writeOnAttach);
+    	var record = new tizen.NDEFRecordURI(content);
+		messageToWrite = new tizen.NDEFMessage([record]);
+		adapter.setTagListener({onattach: writeOnAttach, ondetach: function(){outLog.innerHTML += "<br><b>URI was written, detached</b><br>";}});
     }
     function writeRecordText(content) {
     	readNFCTag(false);
-    	var record = new NDEFRecordText(content,"en-US","UTF8");
-		messageToWrite = new NDEFMessage([record]);
-		adapter.setTagListener(writeOnAttach);
+    	var record = new tizen.NDEFRecordText(content,"en-US","UTF8");
+		messageToWrite = new tizen.NDEFMessage([record]);
+		adapter.setTagListener({onattach: writeOnAttach, ondetach: function(){outLog.innerHTML += "<br><b>Text was written, detached</b><br>";}});
     }
 
 //Initialize function
