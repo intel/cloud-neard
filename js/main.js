@@ -11,7 +11,7 @@
 		writeLog = document.getElementById("writeLog");
 		recordContentText = document.getElementById("recordContentText");
 		// init NFC global objects
-		adapter = tizen.nfc.getDefaultAdapter();
+		adapter = nfc.getDefaultAdapter();
 		adapter.setPowered(true);
 		// initial state with tag reading disabled
 		readNFCTag(false);
@@ -55,6 +55,7 @@
 
     // Manage NFC Tag reading
     function readNFCTag(enabled) {
+		adapter.setPolling(enabled);
     	if (enabled) {
     		adapter.setTagListener({onattach: readOnAttach, ondetach: function(){outLog.innerHTML += "<br><b>Tag was read, detached</b><br>";}});
     		document.tagManagement.tagListener[0].checked="true";
@@ -98,10 +99,24 @@
 		adapter.setTagListener({onattach: writeOnAttach, ondetach: function(){outLog.innerHTML += "<br><b>Text was written, detached</b><br>";}});
     }
 
-//Initialize function
-var init = function () {
-	initPage();
-};
-// window.onload can work without <body onload="">
-window.onload = init;
+	//
+	// Debug log function
+	//
+
+	function debugLog(msg) {
+		alert(msg);
+	}
+	
+	//
+	// Main Init function
+	//
+
+	var init = function () {
+		var cloudeebusURI = "ws://localhost:9000";
+		nfc.init(cloudeebusURI, 
+				initPage,
+				debugLog);
+	};
+	// window.onload can work without <body onload="">
+	window.onload = init;
 
