@@ -123,12 +123,23 @@ nfc.NFCAdapter.prototype.setTagListener = function(detectCB, errorCB, tagFilter)
 	
 	var self = this;
 	
+	var tag = null;
+	
 	self.listening = true;
 	if (self.connected)
 		return;
 	
+	function onTagPropsOk(props) {
+		tag.props = props;
+		tag.type = props.Type;
+		if (detectCB)
+			detectCB.onattach(tag);
+	}
+	
 	function onTagFound(tagId) {
-		detectCB.onattach(new nfc.NFCTag(nfc.bus.getObject(nfc.busName, tagId)));
+		tag = new nfc.NFCTag(nfc.bus.getObject(nfc.busName, tagId));
+		tag.proxy.callMethod("org.neard.Tag", "GetProperties", 
+				[], onTagPropsOk, errorCB);
 	}
 	
 	function onPropertyChanged(key, table) {
@@ -166,6 +177,102 @@ nfc.NFCTag = function(proxy) {
 	}
 	return this;
 };
+
+
+nfc.NFCTag.prototype.readNDEF = function(readCB, errorCB) {
+	
+	var self = this;
+	
+	if (!self.props)
+		return errorCB("Tag properties unknown.");
+	
+	var records = [];
+	
+	function onRecPropsOk(props) {
+		records.push(nfc.NDEFRecordForProps(props));
+		if (records.length == self.props.Records.length && readCB)
+			readCB(new NDEFMessage(records));
+	}
+	
+	for (var i=0; i<self.props.Records.length; i++) {
+		var recProxy = nfc.bus.getObject(nfc.busName, self.props.Records[i]);
+		recProxy.callMethod("org.neard.Record", "GetProperties", 
+				[], onRecPropsOk, errorCB);
+	}
+};
+
+
+
+/*****************************************************************************/
+
+nfc.NDEFMessage = function() {
+	return this;
+};
+
+
+NDEFMessage = function(records) {
+	nfc.NDEFMessage.call(this);
+	this.records = records;
+	return this;
+};
+
+NDEFMessage.prototype = new nfc.NDEFMessage();
+NDEFMessage.prototype.constructor = NDEFMessage;
+
+
+
+/*****************************************************************************/
+
+nfc.NDEFRecord = function(props) {
+	return this;
+};
+
+
+
+/*****************************************************************************/
+
+nfc.NDEFRecordText = function(props) {
+	nfc.NDEFRecord.call(this,props);
+	if (props) {
+		this.text = props.Representation;
+		this.languageCode = props.Language;
+		this.encoding = props.Encoding;
+	}
+	return this;
+};
+
+nfc.NDEFRecordText.prototype = new nfc.NDEFRecord();
+nfc.NDEFRecordText.prototype.constructor = nfc.NDEFRecordText;
+
+
+
+/*****************************************************************************/
+
+nfc.NDEFRecordURI = function(props) {
+	nfc.NDEFRecord.call(this,props);
+	if (props) {
+		this.uri = props.URI;
+	}
+	return this;
+};
+
+nfc.NDEFRecordURI.prototype = new nfc.NDEFRecord();
+nfc.NDEFRecordURI.prototype.constructor = nfc.NDEFRecordURI;
+
+
+
+/*****************************************************************************/
+
+nfc.NDEFRecordForProps = function(props) {
+	if (props.Type == "Text")
+		return new nfc.NDEFRecordURI(props);
+	if (props.Type == "URI")
+		return new nfc.NDEFRecordURI(props);
+	return new nfc.NDEFRecord(props);
+};
+
+
+
 
 
 

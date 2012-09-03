@@ -36,8 +36,7 @@
 
     function logMessage(msg) {
 		outLog.innerHTML +=  "<ul>";
-		outLog.innerHTML += "</ul>";
-		for (var index=0; index < msg.recordCount; index++) {
+		for (var index=0; index < msg.records.length; index++) {
 			logRecord(msg.records[index]);
 		}
 		outLog.innerHTML += "</ul>";
@@ -47,8 +46,6 @@
 	function readOnAttach(nfcTag) {
 		outLog.innerHTML += "<hr><b>Tag found</b><br>";
 		outLog.innerHTML += "Tag type:" + nfcTag.type + "<br>";
-		if (!nfcTag.isSupportedNDEF)
-			return;
 		nfcTag.readNDEF(logMessage);
 	}
 	
