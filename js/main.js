@@ -85,14 +85,22 @@
     	readNFCTag(false);
     	var record = new NDEFRecordURI(content);
 		messageToWrite = new NDEFMessage([record]);
-		adapter.setTagListener({onattach: writeOnAttach, ondetach: function(){outLog.innerHTML += "<br><b>URI was written, detached</b><br>";}});
+		adapter.setTagListener({onattach: writeOnAttach, ondetach: function() {
+			outLog.innerHTML += "<br><b>URI was written, detached</b><br>";
+			adapter.unsetTagListener();
+			}
+		});
 		adapter.setPolling(true);
     }
     function writeRecordText(content) {
     	readNFCTag(false);
     	var record = new NDEFRecordText(content,"en-US","UTF-8");
 		messageToWrite = new NDEFMessage([record]);
-		adapter.setTagListener({onattach: writeOnAttach, ondetach: function(){outLog.innerHTML += "<br><b>Text was written, detached</b><br>";}});
+		adapter.setTagListener({onattach: writeOnAttach, ondetach: function() {
+			outLog.innerHTML += "<br><b>Text was written, detached</b><br>";
+			adapter.unsetTagListener();
+			}
+		});
 		adapter.setPolling(true);
     }
 
@@ -109,7 +117,7 @@
 	//
 
 	var init = function () {
-		var cloudeebusURI = "ws://localhost:9000";
+		var cloudeebusURI = "ws://192.168.1.15:9000";
 		nfc.init(cloudeebusURI, 
 				initPage,
 				debugLog);
