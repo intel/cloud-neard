@@ -200,7 +200,11 @@ nfc.NFCTag.prototype.readNDEF = function(readCB, errorCB) {
 };
 
 
-nfc.NFCTag.prototype.writeNDEF = function(ndefMessage, writeCB, errorCB) {
+nfc.NFCTag.prototype.writeNDEF = function(ndefMessage, successCB, errorCB) {
+	var ndefRecord = ndefMessage.records[0];
+	var rec = ndefRecord.neardRecord();
+	this.proxy.callMethod("org.neard.Tag", "Write", 
+			[rec], successCB, errorCB);
 };
 
 
@@ -230,6 +234,11 @@ nfc.NDEFRecord = function(props) {
 };
 
 
+nfc.NDEFRecord.prototype.neardRecord = function() {
+	return {};
+};
+
+
 
 /*****************************************************************************/
 
@@ -245,6 +254,16 @@ nfc.NDEFRecordText = function(props) {
 
 nfc.NDEFRecordText.prototype = new nfc.NDEFRecord();
 nfc.NDEFRecordText.prototype.constructor = nfc.NDEFRecordText;
+
+
+nfc.NDEFRecordText.prototype.neardRecord = function() {
+	return {
+		Type: "Text",
+		Representation: this.text,
+		Language: this.languageCode,
+		Encoding: this.encoding
+	};
+};
 
 
 NDEFRecordText = function(text, languageCode, encoding) {
@@ -274,6 +293,14 @@ nfc.NDEFRecordURI.prototype = new nfc.NDEFRecord();
 nfc.NDEFRecordURI.prototype.constructor = nfc.NDEFRecordURI;
 
 
+nfc.NDEFRecordURI.prototype.neardRecord = function() {
+	return {
+		Type: "URI",
+		URI: this.uri
+	};
+};
+
+
 NDEFRecordURI = function(uri) {
 	nfc.NDEFRecordURI.call(this);
 	this.uri = uri;
@@ -289,7 +316,7 @@ NDEFRecordURI.prototype.constructor = NDEFRecordURI;
 
 nfc.NDEFRecordForProps = function(props) {
 	if (props.Type == "Text")
-		return new nfc.NDEFRecordURI(props);
+		return new nfc.NDEFRecordText(props);
 	if (props.Type == "URI")
 		return new nfc.NDEFRecordURI(props);
 	return new nfc.NDEFRecord(props);
