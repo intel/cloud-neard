@@ -69,8 +69,6 @@
 	function writeOnAttach(nfcTag) {
 		if (!messageToWrite)
 			alert("No message to write");
-		if (!nfcTag.isSupportedNDEF)
-			return;
 		nfcTag.writeNDEF(messageToWrite);
 		if (messageToWrite.records[0].text)
 			writeLog.innerHTML = "<b>Wrote text message:</b> " + 
@@ -85,15 +83,17 @@
     // Manage NFC Tag writing
     function writeRecordURL(content) {
     	readNFCTag(false);
-    	var record = new tizen.NDEFRecordURI(content);
-		messageToWrite = new tizen.NDEFMessage([record]);
+    	var record = new NDEFRecordURI(content);
+		messageToWrite = new NDEFMessage([record]);
 		adapter.setTagListener({onattach: writeOnAttach, ondetach: function(){outLog.innerHTML += "<br><b>URI was written, detached</b><br>";}});
+		adapter.setPolling(true);
     }
     function writeRecordText(content) {
     	readNFCTag(false);
-    	var record = new tizen.NDEFRecordText(content,"en-US","UTF8");
-		messageToWrite = new tizen.NDEFMessage([record]);
+    	var record = new NDEFRecordText(content,"en-US","UTF-8");
+		messageToWrite = new NDEFMessage([record]);
 		adapter.setTagListener({onattach: writeOnAttach, ondetach: function(){outLog.innerHTML += "<br><b>Text was written, detached</b><br>";}});
+		adapter.setPolling(true);
     }
 
 	//

@@ -125,9 +125,8 @@ nfc.NFCAdapter.prototype.setTagListener = function(detectCB, errorCB, tagFilter)
 	
 	var tag = null;
 	
-	self.listening = true;
 	if (self.connected)
-		return;
+		self.unsetTagListener();
 	
 	function onTagPropsOk(props) {
 		tag.props = props;
@@ -143,8 +142,6 @@ nfc.NFCAdapter.prototype.setTagListener = function(detectCB, errorCB, tagFilter)
 	}
 	
 	function onPropertyChanged(key, table) {
-		if (!self.listening)
-			return;
 		if (key == "Tags") {
 			if (table.length == 0) {
 				detectCB.ondetach();
@@ -162,7 +159,8 @@ nfc.NFCAdapter.prototype.setTagListener = function(detectCB, errorCB, tagFilter)
 
 
 nfc.NFCAdapter.prototype.unsetTagListener = function() {
-	this.listening = false;
+	this.proxy.disconnectSignal("org.neard.Adapter","PropertyChanged");
+	this.connected = false;
 };
 
 
@@ -199,6 +197,10 @@ nfc.NFCTag.prototype.readNDEF = function(readCB, errorCB) {
 		recProxy.callMethod("org.neard.Record", "GetProperties", 
 				[], onRecPropsOk, errorCB);
 	}
+};
+
+
+nfc.NFCTag.prototype.writeNDEF = function(ndefMessage, writeCB, errorCB) {
 };
 
 
@@ -245,6 +247,18 @@ nfc.NDEFRecordText.prototype = new nfc.NDEFRecord();
 nfc.NDEFRecordText.prototype.constructor = nfc.NDEFRecordText;
 
 
+NDEFRecordText = function(text, languageCode, encoding) {
+	nfc.NDEFRecordText.call(this);
+	this.text = text;
+	this.languageCode = languageCode ? languageCode : "en-US";
+	this.encoding = encoding ? encoding : "UTF-8";
+	return this;
+};
+
+NDEFRecordText.prototype = new nfc.NDEFRecordText();
+NDEFRecordText.prototype.constructor = NDEFRecordText;
+
+
 
 /*****************************************************************************/
 
@@ -258,6 +272,16 @@ nfc.NDEFRecordURI = function(props) {
 
 nfc.NDEFRecordURI.prototype = new nfc.NDEFRecord();
 nfc.NDEFRecordURI.prototype.constructor = nfc.NDEFRecordURI;
+
+
+NDEFRecordURI = function(uri) {
+	nfc.NDEFRecordURI.call(this);
+	this.uri = uri;
+	return this;
+};
+
+NDEFRecordURI.prototype = new nfc.NDEFRecordURI();
+NDEFRecordURI.prototype.constructor = NDEFRecordURI;
 
 
 
