@@ -30,7 +30,7 @@ nfc.reset = function() {
 };
 
 
-nfc.init = function(uri, successCB, errorCB) {
+nfc.init = function(uri, manifest, successCB, errorCB) {
 	nfc.reset();
 	
 	function onAdapterPropsOk(props) {
@@ -65,7 +65,7 @@ nfc.init = function(uri, successCB, errorCB) {
 		nfc.manager = nfc.bus.getObject(nfc.busName, "/", onManagerOk, errorCB);
 	}
 	
-	cloudeebus.connect(uri, onConnectOk, errorCB);
+	cloudeebus.connect(uri, manifest, onConnectOk, errorCB);
 };
 
 

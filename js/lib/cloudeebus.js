@@ -28,21 +28,44 @@ cloudeebus.reset = function() {
 };
 
 
-cloudeebus.log = function(msg) {
+cloudeebus.log = function(msg) { 
 };
 
 
-cloudeebus.connect = function(uri, successCB, errorCB) {
+cloudeebus.connect = function(uri, manifest, successCB, errorCB) {
 	cloudeebus.reset();
 	cloudeebus.uri = uri;
 	
-	function onWAMPSessionConnectedCB(session) {
-		cloudeebus.wampSession = session;
+	function onWAMPSessionAuthErrorCB(error) {
+		cloudeebus.log("Authentication error: " + error.desc);
+		if (errorCB)
+			errorCB(error.desc);
+	}
+	
+	function onWAMPSessionAuthenticatedCB(permissions) {
+		cloudeebus.log("Connected to " + cloudeebus.uri);
 		cloudeebus.sessionBus = new cloudeebus.BusConnection("session", cloudeebus.wampSession);
 		cloudeebus.systemBus = new cloudeebus.BusConnection("system", cloudeebus.wampSession);
-		cloudeebus.log("Connected to " + cloudeebus.uri);
 		if (successCB)
 			successCB();
+	}
+	
+	function onWAMPSessionChallengedCB(challenge) {
+		var signature = cloudeebus.wampSession.authsign(challenge, manifest.key);
+		cloudeebus.wampSession.auth(signature).then(onWAMPSessionAuthenticatedCB, onWAMPSessionAuthErrorCB);
+	}
+	
+	function onWAMPSessionConnectedCB(session) {
+		cloudeebus.wampSession = session;
+		if (manifest)
+			cloudeebus.wampSession.authreq(
+					manifest.name, 
+					{permissions: JSON.stringify(manifest.permissions)}
+				).then(onWAMPSessionChallengedCB, onWAMPSessionAuthErrorCB);
+		else
+			cloudeebus.wampSession.authreq().then(function() {
+				cloudeebus.wampSession.auth().then(onWAMPSessionAuthenticatedCB, onWAMPSessionAuthErrorCB);
+				}, onWAMPSessionAuthErrorCB);
 	}
 
 	function onWAMPSessionErrorCB(code, reason) {

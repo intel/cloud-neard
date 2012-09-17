@@ -113,12 +113,26 @@
 	}
 	
 	//
+	// Cloudeebus manifest
+	//
+
+	var manifest = {
+			name: "tizen-nfc-app",
+			version: "development",
+			key: "Neard",
+			permissions: [
+				"org.neard"
+			]
+	};
+	
+	//
 	// Main Init function
 	//
 
 	var init = function () {
 		var cloudeebusURI = "ws://localhost:9000";
 		nfc.init(cloudeebusURI, 
+				manifest,
 				initPage,
 				debugLog);
 	};
