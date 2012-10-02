@@ -113,9 +113,9 @@ nfc.NFCAdapter.prototype.setPolling = function(state, successCB, errorCB) {
 	}
 
 	if (state)
-		self.proxy.StartPoll(onPollingOk, errorCB);
+		self.proxy.StartPollLoop("Initiator", onPollingOk, errorCB);
 	else
-		self.proxy.StopPoll(onPollingOk, errorCB);
+		self.proxy.StopPollLoop(onPollingOk, errorCB);
 };
 
 
