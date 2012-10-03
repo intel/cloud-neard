@@ -117,7 +117,7 @@
 	//
 
 	var manifest = {
-			name: "tizen-nfc-app",
+			name: "cloud-nfc-app",
 			version: "development",
 			key: "Neard",
 			permissions: [
