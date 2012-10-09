@@ -117,7 +117,7 @@
 	//
 
 	var manifest = {
-			name: "cloud-nfc-app",
+			name: "cloud-neard",
 			version: "development",
 			key: "Neard",
 			permissions: [
