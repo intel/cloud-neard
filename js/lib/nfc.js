@@ -136,6 +136,8 @@ nfc.NFCAdapter.prototype.setTagListener = function(detectCB, errorCB, tagFilter)
 	}
 	
 	function onTagFound(tagId) {
+		if (tag) /* trigger "found" callback only once */
+			return;
 		tag = new nfc.NFCTag(nfc.bus.getObject(nfc.busName, tagId));
 		tag.proxy.callMethod("org.neard.Tag", "GetProperties", 
 				[], onTagPropsOk, errorCB);
@@ -144,6 +146,7 @@ nfc.NFCAdapter.prototype.setTagListener = function(detectCB, errorCB, tagFilter)
 	function onPropertyChanged(key, table) {
 		if (key == "Tags") {
 			if (table.length == 0) {
+				tag = null;
 				detectCB.ondetach();
 				self.setPolling(true);
 			}
