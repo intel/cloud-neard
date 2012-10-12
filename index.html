@@ -17,13 +17,13 @@
 <body>
 
 	<header>
-	<center><h1>Near Field Communication</h1></center>
+	<h1>Near Field Communication</h1>
 	</header>
 	<hr>
 	
 	<form name="tagManagement">
 	<header>
-	<h2 style="background-color:#666;color:#EFD3D3">NFC tags management</h2>
+	<h2>NFC tags management</h2>
 	</header>
 	<table style="width:100%">
 	<tr>
@@ -35,7 +35,7 @@
 		<input type="text" name="recordContent" id="recordContentText"/><br>
 		<input type="button" value="write URL" onClick="writeRecordURL(recordContent.value)"/>
 		<input type="button" value="write Text" onClick="writeRecordText(recordContent.value)"/><br>
-		<div id="writeLog"></div>
+		<div id="writeLog" class="content" style="min-height:40px"></div>
 		</td>
 	</tr>
 	<tr>
@@ -46,9 +46,9 @@
 	
 	<hr>
 	<header>
-	<h2 style="background-color:#666;color:#EFD3D3">Messages received</h2>
+	<h2>Messages received</h2>
 	</header>
-	<div id="outLog"></div>
+	<div id="outLog" class="content" style="min-height:120px"></div>
 
 </body>
 </html>
