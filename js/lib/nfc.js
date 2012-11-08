@@ -228,7 +228,6 @@ nfc.NFCPeer = function(proxy) {
 		this.id = proxy.objectPath;
 	}
 	this.isConnected = false;
-	this.ndefListener = null;
 	return this;
 };
 
@@ -240,8 +239,6 @@ nfc.NFCPeer.prototype.setReceiveNDEFListener = function(receiveCB, errorCB) {
 	if (!self.props)
 		return errorCB("Peer properties unknown.");
 	
-	self.ndefListener = receiveCB;
-	
 	var records = [];
 	
 	function onRecPropsOk(props) {
@@ -250,28 +247,32 @@ nfc.NFCPeer.prototype.setReceiveNDEFListener = function(receiveCB, errorCB) {
 			receiveCB(new NDEFMessage(records));
 	}
 	
-	for (var i=0; i<self.props.Records.length; i++) {
-		var recProxy = nfc.bus.getObject(nfc.busName, self.props.Records[i]);
-		recProxy.callMethod("org.neard.Record", "GetProperties", 
-				[], onRecPropsOk, errorCB);
+	function NDEFMessageForRecords() {
+		records = [];
+		for (var i=0; i<self.props.Records.length; i++) {
+			var recProxy = nfc.bus.getObject(nfc.busName, self.props.Records[i]);
+			recProxy.callMethod("org.neard.Record", "GetProperties", 
+					[], onRecPropsOk, errorCB);
+		}
 	}
 	
 	function onPropertyChanged(key, table) {
-		alert("#### NFCPeer property: "
-			+ JSON.stringify(key) + " changed: "
-			+ JSON.stringify(table));
+		if (key == "Records") {
+			self.props.Records = table;
+			NDEFMessageForRecords();
+		}
 	}
 
 	if (!self.isConnected) {
 		self.proxy.connectToSignal("org.neard.Device","PropertyChanged",
 				onPropertyChanged);
 		self.isConnected = true;
+		NDEFMessageForRecords();
 	}
 };
 
 
 nfc.NFCPeer.prototype.unsetReceiveNDEFListener = function() {
-	this.ndefListener = null;
 	this.proxy.disconnectSignal("org.neard.Device","PropertyChanged");
 	this.isConnected = false;
 };
