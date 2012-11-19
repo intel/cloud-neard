@@ -28,7 +28,7 @@ var dbus = { // hook object for dbus types not translated by python-json
 
 /*****************************************************************************/
 
-var cloudeebus = window.cloudeebus = {};
+var cloudeebus = window.cloudeebus = {version: "0.2"};
 
 cloudeebus.reset = function() {
 	cloudeebus.sessionBus = null;
@@ -46,6 +46,19 @@ cloudeebus.connect = function(uri, manifest, successCB, errorCB) {
 	cloudeebus.reset();
 	cloudeebus.uri = uri;
 	
+	function onCloudeebusVersionCheckCB(version) {
+		if (cloudeebus.version == version) {
+			cloudeebus.log("Connected to " + cloudeebus.uri);
+			if (successCB)
+				successCB();
+		} else {
+			var errorMsg = "Cloudeebus server version " + version + " and client version " + cloudeebus.version + " mismatch";
+			cloudeebus.log(errorMsg);
+			if (errorCB)
+				errorCB(errorMsg);
+		}
+	}
+	
 	function onWAMPSessionAuthErrorCB(error) {
 		cloudeebus.log("Authentication error: " + error.desc);
 		if (errorCB)
@@ -53,11 +66,9 @@ cloudeebus.connect = function(uri, manifest, successCB, errorCB) {
 	}
 	
 	function onWAMPSessionAuthenticatedCB(permissions) {
-		cloudeebus.log("Connected to " + cloudeebus.uri);
 		cloudeebus.sessionBus = new cloudeebus.BusConnection("session", cloudeebus.wampSession);
 		cloudeebus.systemBus = new cloudeebus.BusConnection("system", cloudeebus.wampSession);
-		if (successCB)
-			successCB();
+		cloudeebus.wampSession.call("getVersion").then(onCloudeebusVersionCheckCB, errorCB);
 	}
 	
 	function onWAMPSessionChallengedCB(challenge) {
@@ -140,12 +151,16 @@ cloudeebus.ProxyObject.prototype._introspect = function(successCB, errorCB) {
 	function getAllPropertiesSuccessCB(props) {
 		for (var prop in props)
 			self[prop] = props[prop];
+		getAllPropertiesNextInterfaceCB();
+	}
+	
+	function getAllPropertiesNextInterfaceCB() {
 		if (self.propInterfaces.length > 0) 
 			self.callMethod("org.freedesktop.DBus.Properties", 
 				"GetAll", 
 				[self.propInterfaces.pop()], 
 				getAllPropertiesSuccessCB, 
-				errorCB);
+				errorCB ? errorCB : getAllPropertiesNextInterfaceCB);
 		else {
 			self.propInterfaces = null;
 			if (successCB)
@@ -192,7 +207,7 @@ cloudeebus.ProxyObject.prototype._introspect = function(successCB, errorCB) {
 				"GetAll", 
 				[self.propInterfaces.pop()], 
 				getAllPropertiesSuccessCB, 
-				errorCB);
+				errorCB ? errorCB : getAllPropertiesNextInterfaceCB);
 		}
 		else {
 			self.propInterfaces = null;
