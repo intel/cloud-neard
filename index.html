@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0, target-densityDpi=device-dpi">
+    <meta name="description" content="neard NDEF reader / writer web application"/>
+
+    <title>Cloud neard</title>
+
+    <link rel="stylesheet" type="text/css" href="css/style.css"/>
+    <script src="js/lib/autobahn.min.js"></script>
+    <script src="js/lib/cloudeebus.js"></script>
+    <script src="js/lib/nfc.js"></script>
+    <script src="js/main.js"></script>
+</head>
+
+<body>
+
+	<header>
+	<h1><a href="https://github.com/01org/cloud-neard">Near Field Communication</a></h1>
+	</header>
+	<hr>
+	
+	<form name="tagManagement">
+	<header>
+	<h2>NFC tags management</h2>
+	</header>
+	<table style="width:100%">
+	<tr>
+		<td><h3>Read NDEF Message</h3>
+		<input type="radio" name="tagListener" value="set" onClick="readNFCTag(true)"/>Register read callback<br>
+		<input type="radio" name="tagListener" value="unset" onClick="readNFCTag(false)"/>Unregister read callback<br>
+		</td>
+		<td><h3>Write NDEF Message</h3>
+		<input type="text" name="recordContent" id="recordContentText"/><br>
+		<input type="button" value="write URL" onClick="writeRecordURL(recordContent.value)"/>
+		<input type="button" value="write Text" onClick="writeRecordText(recordContent.value)"/><br>
+		<div id="writeLog" class="content" style="min-height:40px"></div>
+		</td>
+	</tr>
+	<tr>
+		<td><input type="button" value="Clear results" onClick="clearResults()"></td>
+	</tr>
+	</table>
+	</form>
+	
+	<hr>
+	<header>
+	<h2>Messages received</h2>
+	</header>
+	<div id="outLog" class="content" style="min-height:120px"></div>
+
+</body>
+</html>
