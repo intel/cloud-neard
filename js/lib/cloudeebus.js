@@ -28,7 +28,7 @@ var dbus = { // hook object for dbus types not translated by python-json
 
 /*****************************************************************************/
 
-var cloudeebus = window.cloudeebus = {version: "0.2"};
+var cloudeebus = window.cloudeebus = {version: "0.2.1"};
 
 cloudeebus.reset = function() {
 	cloudeebus.sessionBus = null;
@@ -327,7 +327,7 @@ cloudeebus.ProxyObject.prototype.connectToSignal = function(ifName, signal, succ
 
 cloudeebus.ProxyObject.prototype.disconnectSignal = function(ifName, signal) {
 	try {
-		this.wampSession.unsubscribe(this.busName + "#" + this.objectPath + "#" + ifName + "#" + signal);
+		this.wampSession.unsubscribe(this.busConnection.name + "#" + this.busName + "#" + this.objectPath + "#" + ifName + "#" + signal);
 	}
 	catch (e) {
 		cloudeebus.log("Unsubscribe error: " + e);
