@@ -5,16 +5,21 @@
 	var adapter;
 	
 	// HTML page management
-	function initPage() {
+	function initPage(error) {
 		// init HTML DOM elements
 		outLog = document.getElementById("outLog");
 		writeLog = document.getElementById("writeLog");
 		recordContentText = document.getElementById("recordContentText");
 		// init NFC global objects
-		adapter = nfc.getDefaultAdapter();
-		adapter.setPowered(true);
-		// initial state with tag reading disabled
-		readNFCTag(false);
+		if (error) {
+			adapter = null;
+			debugLog(error)
+		} else {
+			adapter = nfc.getDefaultAdapter();
+			adapter.setPowered(true);
+			// initial state with tag reading disabled
+			readNFCTag(false);
+		}
 	}
 	
 	function clearResults() {
@@ -104,6 +109,13 @@
 		adapter.setPolling(true);
     }
 
+    // NDEF Agent Management
+    function registerNDEFAgent(tagType) {
+		var ndefAgent = new NDEFAgent(tagType);
+		ndefAgent.createService();
+    }
+    
+    
 	//
 	// Debug log function
 	//
@@ -134,7 +146,7 @@
 		nfc.init(cloudeebusURI, 
 				manifest,
 				initPage,
-				debugLog);
+				initPage);
 	};
 	// window.onload can work without <body onload="">
 	window.onload = init;

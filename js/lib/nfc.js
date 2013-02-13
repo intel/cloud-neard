@@ -326,6 +326,37 @@ nfc.NDEFRecordForProps = function(props) {
 };
 
 
+/*****************************************************************************/
+
+nfc.NDEFAgent = function() {
+	this.busName = "system";
+	this.srvName = "org.cloudeebus"
+	this.tagType = null;
+	this.isCreated = false;
+	return this;
+};
+
+
+nfc.NDEFAgent.prototype.createService = function(receiveCB, errorCB) {
+	cloudeebus.createService(this.busName, this.srvName, this.objName, this.xml_template);	
+};
+
+
+NDEFAgent = function(tagType) {
+	nfc.NDEFAgent.call(this);
+	this.tagType = tagType;
+	this.objName = tagType.replace(/:/g, "");
+	this.objName = this.objName.toUpperCase()
+	this.objName = "/CloudeebusNdefagent/" + this.objName;
+	this.xml_template = '<!DOCTYPE node PUBLIC "-//freedesktop//DTD D-BUS Object Introspection 1.0//EN"\n"http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd">\n<node><interface name="org.neard.NDEFAgent"><method name="GetNDEF"><arg name="values" type="a{sv}" direction="in"/></method><method name="Release"></method></interface></node>';
+	return this;
+};
+
+NDEFAgent.prototype = new nfc.NDEFAgent();
+NDEFAgent.prototype.constructor = NDEFAgent;
+
+/*****************************************************************************/
+	
 
 
 
