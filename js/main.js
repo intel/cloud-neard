@@ -57,8 +57,9 @@
 			adapter.setTagListener({onattach: readOnAttach, ondetach: function(){outLog.innerHTML += "<br><b>Tag was read, detached</b><br>";}});
 			adapter.setPeerListener(
 					{
-						onattach: function() {
+						onattach: function(peer) {
 							outLog.innerHTML += "<br><b>Peer detected</b><br>";
+							peer.setReceiveNDEFListener(logMessage);
 						}, 
 						ondetach: function() {
 							outLog.innerHTML += "<br><b>Peer detached</b><br>";
