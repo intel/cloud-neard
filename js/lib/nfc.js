@@ -288,6 +288,16 @@ nfc.NFCPeer.prototype.sendNDEF = function(ndefMessage, successCB, errorCB) {
 };
 
 
+nfc.NFCPeer.prototype.startHandover = function(type, successCB, errorCB) {
+	this.proxy.callMethod("org.neard.Device", "Push", 
+		[{
+			 Type: "Handover",
+			 Carrier: type
+		}], 
+		successCB, errorCB);
+};
+
+
 
 /*****************************************************************************/
 
