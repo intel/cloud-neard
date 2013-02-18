@@ -3,6 +3,9 @@
 	
 	// NFC global objects
 	var adapter;
+
+	// NFC agent to manage NDEF raw data
+	var ndefAgent;
 	
 	// HTML page management
 	function initPage(error) {
@@ -110,9 +113,25 @@
     }
 
     // NDEF Agent Management
+    function agentAddedSuccessCB() {
+    	alert("agentAddedSuccessCB");
+    }
+    function agentAddedErrorCB(error) {
+    	alert("agentAddedErrorCB" + error);
+    }
+    
+    // NDEF Agent Management
+    function serviceAddedSuccessCB() {
+    	ndefAgent.addAgent(agentAddedSuccessCB, agentAddedErrorCB);
+    }
+    function serviceAddedErrorCB(error) {
+    	ndefAgent = null;
+    }
+    
     function registerNDEFAgent(tagType) {
-		var ndefAgent = new NDEFAgent(tagType);
-		ndefAgent.createService();
+		ndefAgent = new NDEFAgent(tagType);
+		ndefAgent.addService(serviceAddedSuccessCB, serviceAddedErrorCB);
+		
     }
     
     

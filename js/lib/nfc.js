@@ -329,27 +329,48 @@ nfc.NDEFRecordForProps = function(props) {
 /*****************************************************************************/
 
 nfc.NDEFAgent = function() {
-	this.busName = "system";
-	this.srvName = "org.cloudeebus"
+	this.srvName = "org.cloudeebus";
 	this.tagType = null;
-	this.isCreated = false;
+	this.objectCreated = false;
+	this.service = null;
 	return this;
 };
 
 
-nfc.NDEFAgent.prototype.createService = function(receiveCB, errorCB) {
-	cloudeebus.createService(this.busName, this.srvName, this.objName, this.xml_template);	
-};
-
-
-NDEFAgent = function(tagType) {
+NDEFAgent = function(tagType, successCB, errorCB) {
 	nfc.NDEFAgent.call(this);
 	this.tagType = tagType;
-	this.objName = tagType.replace(/:/g, "");
-	this.objName = this.objName.toUpperCase()
-	this.objName = "/CloudeebusNdefagent/" + this.objName;
-	this.xml_template = '<!DOCTYPE node PUBLIC "-//freedesktop//DTD D-BUS Object Introspection 1.0//EN"\n"http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd">\n<node><interface name="org.neard.NDEFAgent"><method name="GetNDEF"><arg name="values" type="a{sv}" direction="in"/></method><method name="Release"></method></interface></node>';
-	return this;
+	this.objectPath = tagType.replace(/:/g, "");
+	this.objectPath = this.objectPath.toUpperCase();
+	this.objectPath = "/CloudeebusNdefagent/" + this.objectPath;
+	this.xmlTemplate = '<!DOCTYPE node PUBLIC "-//freedesktop//DTD D-BUS Object Introspection 1.0//EN"\n"http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd">\n<node><interface name="org.neard.NDEFAgent"><method name="GetNDEF"><arg name="values" type="a{sv}" direction="in"/></method><method name="Release"></method></interface></node>';
+};
+
+nfc.NDEFAgent.prototype.addService = function(successCB, errorCB) {
+	self = this;
+	
+	function NDEFserviceAddSuccessCB(dbusService) {
+		if (successCB) {
+			try { // calling dbus hook object function for un-translated types
+				successCB(dbusService);
+			}
+			catch (e) {
+				alert("Method callback exception: " + e);
+			}
+		}
+	}
+
+	function NDEFserviceAddErrorCB(error) {
+		self.service = null;
+		if (errorCB)
+			errorCB(error.desc);
+	}
+	
+	this.service = nfc.bus.addService(this.srvName, NDEFserviceAddSuccessCB, NDEFserviceAddErrorCB);
+};
+
+nfc.NDEFAgent.prototype.addAgent = function(successCB, errorCB) {
+	this.service.addAgent(this.objectPath, this.xmlTemplate, successCB, errorCB);
 };
 
 NDEFAgent.prototype = new nfc.NDEFAgent();

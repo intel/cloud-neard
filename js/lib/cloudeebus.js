@@ -132,6 +132,94 @@ cloudeebus.BusConnection.prototype.getObject = function(busName, objectPath, int
 };
 
 
+cloudeebus.BusConnection.prototype.addService = function(serviceName, successCB, errorCB) {
+	self = this;
+	
+	service = new cloudeebus.Service(this.wampSession, this, serviceName);
+	
+	function busServiceAddedSuccessCB() {
+		if (successCB)
+			successCB(service);
+	}
+	
+	function busServiceAddedErrorCB(error) {
+		if (errorCB)
+			errorCB();
+	}
+	
+	service.add(busServiceAddedSuccessCB, busServiceAddedErrorCB);
+	
+	return service;
+};
+
+
+/*****************************************************************************/
+
+cloudeebus.Service = function(session, busConnection, name) {
+	this.wampSession = session;
+	this.busConnection = busConnection; 
+	this.name = name;
+	this.isCreated = false;
+	return this;
+};
+
+cloudeebus.Service.prototype.add = function(successCB, errorCB) {
+	self = this;
+	
+	function addServiceSuccessCB(dbusService) {
+		if (successCB) {
+			try { // calling dbus hook object function for un-translated types
+				successCB(dbusService);
+			}
+			catch (e) {
+				alert("Method callback exception: " + e);
+			}
+		}
+	}
+	
+	function addServiceErrorCB(error) {
+		if (errorCB)
+			errorCB(error.desc);
+	}
+
+	var arglist = [
+	    this.busConnection,
+	    this.name
+	    ];
+
+	// call dbusSend with bus type, destination, object, message and arguments
+	self.wampSession.call("serviceAdd", arglist).then(addServiceSuccessCB, addServiceErrorCB);
+};
+
+cloudeebus.Service.prototype.addAgent = function(objectPath, xmlTemplate, successCB, errorCB) {
+	self = this;
+	
+	function addAgentSuccessCB(dbusService) {
+		if (successCB) {
+			try { // calling dbus hook object function for un-translated types
+				successCB(dbusService);
+			}
+			catch (e) {
+				alert("Method callback exception: " + e);
+			}
+		}
+	}
+	
+	function addAgentErrorCB(error) {
+		if (errorCB)
+			errorCB(error.desc);
+	}
+
+	var arglist = [
+	    objectPath,
+	    xmlTemplate
+	    ];
+
+	// call dbusSend with bus type, destination, object, message and arguments
+	self.wampSession.call("serviceAddAgent", arglist).then(addAgentSuccessCB, addAgentErrorCB);
+};
+
+
 
 /*****************************************************************************/
 
@@ -333,28 +421,3 @@ cloudeebus.ProxyObject.prototype.disconnectSignal = function(ifName, signal) {
 		cloudeebus.log("Unsubscribe error: " + e);
 	}
 };
-
-/******************* Agent Management ****************************************/
-cloudeebus.createService = function(busName, dbusSrvName, objectPath, busConnection, xml_template) {
-	var self = this; 
-
-	function createServiceSuccessCB(className) {
-		cloudeebus.log("createServiceSuccessCB=: " + className);
-	}
-
-	function createServiceErrorCB(error) {
-		cloudeebus.log("createServiceErrorCB=: " + error.desc);
-	}
-	
-	var arglist = [
-	    busName,
-		dbusSrvName,
-		objectPath,
-		busConnection,
-		xml_template
-	];
-
-	// call dbusSend with bus type, destination, object, message and arguments
-	self.wampSession.call("createService", arglist).then(createServiceSuccessCB, createServiceErrorCB);
-};
-/*****************************************************************************/
