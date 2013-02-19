@@ -326,6 +326,58 @@ nfc.NDEFRecordForProps = function(props) {
 };
 
 
+/*****************************************************************************/
+
+nfc.NDEFAgent = function() {
+	this.srvName = "org.cloudeebus";
+	this.tagType = null;
+	this.objectCreated = false;
+	this.service = null;
+	return this;
+};
+
+
+NDEFAgent = function(tagType, successCB, errorCB) {
+	nfc.NDEFAgent.call(this);
+	this.tagType = tagType;
+	this.objectPath = tagType.replace(/:/g, "");
+	this.objectPath = this.objectPath.toUpperCase();
+	this.objectPath = "/CloudeebusNdefagent/" + this.objectPath;
+	this.xmlTemplate = '<!DOCTYPE node PUBLIC "-//freedesktop//DTD D-BUS Object Introspection 1.0//EN"\n"http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd">\n<node><interface name="org.neard.NDEFAgent"><method name="GetNDEF"><arg name="values" type="a{sv}" direction="in"/></method><method name="Release"></method></interface></node>';
+};
+
+nfc.NDEFAgent.prototype.addService = function(successCB, errorCB) {
+	self = this;
+	
+	function NDEFserviceAddSuccessCB(dbusService) {
+		if (successCB) {
+			try { // calling dbus hook object function for un-translated types
+				successCB(dbusService);
+			}
+			catch (e) {
+				alert("Method callback exception: " + e);
+			}
+		}
+	}
+
+	function NDEFserviceAddErrorCB(error) {
+		self.service = null;
+		if (errorCB)
+			errorCB(error.desc);
+	}
+	
+	this.service = nfc.bus.addService(this.srvName, NDEFserviceAddSuccessCB, NDEFserviceAddErrorCB);
+};
+
+nfc.NDEFAgent.prototype.addAgent = function(successCB, errorCB) {
+	this.service.addAgent(this.objectPath, this.xmlTemplate, successCB, errorCB);
+};
+
+NDEFAgent.prototype = new nfc.NDEFAgent();
+NDEFAgent.prototype.constructor = NDEFAgent;
+
+/*****************************************************************************/
+	
 
 
 
