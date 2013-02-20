@@ -73,6 +73,37 @@ nfc.getDefaultAdapter = function() {
 	return nfc.defaultAdapter;
 };
 
+nfc.registerNdefAgent = function(tagType, successCB, errorCB) {
+	self = this;
+	var ndefAgent = null;
+
+	
+	function agentAddSucessCB() {
+		if (successCB) {
+			try { // NDEF object added successfully, invoking success callback of the main code (with ndefAgent instance).
+				successCB(ndefAgent);
+			}
+			catch (e) {
+				alert("Method callback exception: " + e);
+			}
+		}
+	}
+
+	function NdefServiceAddSuccessCB() {
+		if (successCB) {
+			try { // Adding NDEF object (interface & method) to the newly created service
+				ndefAgent.addAgent(agentAddSucessCB, errorCB);
+			}
+			catch (e) {
+				alert("Method callback exception: " + e);
+			}
+		}
+	}
+
+	ndefAgent = new NDEFAgent(tagType);
+	ndefAgent.addService(NdefServiceAddSuccessCB, errorCB);		
+};
+
 
 
 /*****************************************************************************/
@@ -349,10 +380,10 @@ NDEFAgent = function(tagType, successCB, errorCB) {
 nfc.NDEFAgent.prototype.addService = function(successCB, errorCB) {
 	self = this;
 	
-	function NDEFserviceAddSuccessCB(dbusService) {
+	function NDEFserviceAddSuccessCB(cloudeebusService) {
 		if (successCB) {
 			try { // calling dbus hook object function for un-translated types
-				successCB(dbusService);
+				successCB(cloudeebusService);
 			}
 			catch (e) {
 				alert("Method callback exception: " + e);

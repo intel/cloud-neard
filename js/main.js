@@ -1,5 +1,5 @@
 	// HTML DOM elements
-	var outLog, writeLog, recordContentText;
+	var outLog, writeLog, recordContentText, ndefLog;
 	
 	// NFC global objects
 	var adapter;
@@ -13,6 +13,7 @@
 		outLog = document.getElementById("outLog");
 		writeLog = document.getElementById("writeLog");
 		recordContentText = document.getElementById("recordContentText");
+		ndefLog = document.getElementById("ndefLog");
 		// init NFC global objects
 		if (error) {
 			adapter = null;
@@ -113,25 +114,16 @@
     }
 
     // NDEF Agent Management
-    function agentAddedSuccessCB() {
-    	alert("agentAddedSuccessCB");
+    function NdefAgentSuccessCB(NDEFAgent) {
+    	ndefLog.innerHTML += "<br><b>main: agentAddedSuccessCB</b><br>";
+    	ndefAgent = NDEFAgent;
     }
-    function agentAddedErrorCB(error) {
-    	alert("agentAddedErrorCB" + error);
-    }
-    
-    // NDEF Agent Management
-    function serviceAddedSuccessCB() {
-    	ndefAgent.addAgent(agentAddedSuccessCB, agentAddedErrorCB);
-    }
-    function serviceAddedErrorCB(error) {
-    	ndefAgent = null;
+    function NdefAgentErrorCB(error) {
+    	ndefLog.innerHTML += "<br>main: agentAddedErrorCB: <b>" + error + "</b>";
     }
     
     function registerNDEFAgent(tagType) {
-		ndefAgent = new NDEFAgent(tagType);
-		ndefAgent.addService(serviceAddedSuccessCB, serviceAddedErrorCB);
-		
+    	nfc.registerNdefAgent(tagType, NdefAgentSuccessCB, NdefAgentErrorCB);
     }
     
     

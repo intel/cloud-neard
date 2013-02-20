@@ -135,11 +135,11 @@ cloudeebus.BusConnection.prototype.getObject = function(busName, objectPath, int
 cloudeebus.BusConnection.prototype.addService = function(serviceName, successCB, errorCB) {
 	self = this;
 	
-	service = new cloudeebus.Service(this.wampSession, this, serviceName);
+	cloudeebusService = new cloudeebus.Service(this.wampSession, this, serviceName);
 	
 	function busServiceAddedSuccessCB() {
 		if (successCB)
-			successCB(service);
+			successCB(cloudeebusService);
 	}
 	
 	function busServiceAddedErrorCB(error) {
@@ -147,9 +147,9 @@ cloudeebus.BusConnection.prototype.addService = function(serviceName, successCB,
 			errorCB();
 	}
 	
-	service.add(busServiceAddedSuccessCB, busServiceAddedErrorCB);
+	cloudeebusService.add(busServiceAddedSuccessCB, busServiceAddedErrorCB);
 	
-	return service;
+	return cloudeebusService;
 };
 
 
