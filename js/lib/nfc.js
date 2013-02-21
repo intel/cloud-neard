@@ -73,13 +73,25 @@ nfc.getDefaultAdapter = function() {
 	return nfc.defaultAdapter;
 };
 
-nfc.registerNdefAgent = function(tagType, successCB, errorCB) {
+nfc.registerNdefAgent = function(tagType, log, successCB, errorCB) {
 	self = this;
 	var ndefAgent = null;
 
 	
-	function onRelease(args) {
-		ndefAgent.returnMethod(methodName="Release", 
+	function ReleaseMethodHandler(methodId) {
+		ndefAgent.returnMethod(methodId, 
+				   success=true, 
+				   result=null, 
+				   successCB=null, 
+				   errorCB=null);
+	}
+
+	function GetNDEFMethodHandler(methodId, args) {
+		
+//		self.log += "<br>GetNDEFMethodHandler" + args;
+		alert("GetNDEFMethodHandler" + args);
+		
+		ndefAgent.returnMethod(methodId, 
 				   success=true, 
 				   result=null, 
 				   successCB=null, 
@@ -87,7 +99,8 @@ nfc.registerNdefAgent = function(tagType, successCB, errorCB) {
 	}
 
 	function agentAddSucessCB() {		
-		ndefAgent.registerMethod("Release", onRelease);
+		ndefAgent.registerMethod("Release", ReleaseMethodHandler);
+		ndefAgent.registerMethod("GetNDEF", GetNDEFMethodHandler);
 		if (successCB) {
 			try { // NDEF object added successfully, invoking success callback of the main code (with ndefAgent instance).
 				successCB(ndefAgent);
@@ -109,6 +122,7 @@ nfc.registerNdefAgent = function(tagType, successCB, errorCB) {
 		}
 	}
 
+	this.log = log;
 	ndefAgent = new NDEFAgent(tagType);
 	ndefAgent.addService(NdefServiceAddSuccessCB, errorCB);		
 };
@@ -419,9 +433,7 @@ nfc.NDEFAgent.prototype.registerMethod = function(methodName, methodHandler) {
 	this.service.registerMethod(methodId, methodHandler);
 };
 
-nfc.NDEFAgent.prototype.returnMethod = function(methodName, success, result, successCB, errorCB) {
-	methodId = this.srvName + "#" + this.objectPath + "#" + methodName;
-	
+nfc.NDEFAgent.prototype.returnMethod = function(methodId, success, result, successCB, errorCB) {
 	this.service.returnMethod(methodId, success, result, successCB, errorCB);
 };
 

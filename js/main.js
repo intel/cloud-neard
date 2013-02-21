@@ -124,7 +124,7 @@
     }
     
     function registerNDEFAgent(tagType) {
-    	nfc.registerNdefAgent(tagType, NdefAgentSuccessCB, NdefAgentErrorCB);
+    	nfc.registerNdefAgent(tagType, ndefLog.innerHTML, NdefAgentSuccessCB, NdefAgentErrorCB);
     }
     
     
