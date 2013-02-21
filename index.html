@@ -49,6 +49,16 @@
 	<h2>Messages received</h2>
 	</header>
 	<div id="outLog" class="content" style="min-height:120px"></div>
+	<header>
+	<h2>Agent management received</h2>
+	</header>
+	<tr>
+		<td><h3>Register NDEF Agent</h3>
+		<input type="text" value="urn:nfc:wkt:U" name="tagType" id="recordTagType"/><br>
+		<input type="button" value="Register NDEF Agent" onClick="registerNDEFAgent(recordTagType.value)"/>
+		<div id="ndefLog" class="content" style="min-height:40px"></div>
+		</td>
+	</tr>
 
 </body>
 </html>
