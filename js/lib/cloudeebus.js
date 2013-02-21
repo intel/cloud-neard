@@ -219,6 +219,9 @@ cloudeebus.Service.prototype.addAgent = function(objectPath, xmlTemplate, succes
 	self.wampSession.call("serviceAddAgent", arglist).then(addAgentSuccessCB, addAgentErrorCB);
 };
 
+cloudeebus.Service.prototype.registerMethod = function(methodId, methodHandler) {
+	self.wampSession.subscribe(methodId, methodHandler);
+};
 
 
 /*****************************************************************************/

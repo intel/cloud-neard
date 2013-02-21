@@ -78,7 +78,13 @@ nfc.registerNdefAgent = function(tagType, successCB, errorCB) {
 	var ndefAgent = null;
 
 	
-	function agentAddSucessCB() {
+	function onRelease() {		
+		alert("YES!!!");
+		ndefAgent.returnSuccess("Release", null);
+	}
+
+	function agentAddSucessCB() {		
+		ndefAgent.registerMethod("Release", onRelease);
 		if (successCB) {
 			try { // NDEF object added successfully, invoking success callback of the main code (with ndefAgent instance).
 				successCB(ndefAgent);
@@ -402,6 +408,13 @@ nfc.NDEFAgent.prototype.addService = function(successCB, errorCB) {
 
 nfc.NDEFAgent.prototype.addAgent = function(successCB, errorCB) {
 	this.service.addAgent(this.objectPath, this.xmlTemplate, successCB, errorCB);
+};
+
+nfc.NDEFAgent.prototype.registerMethod = function(methodName, methodHandler) {
+	var self = this;
+	methodId = this.srvName + "#" + this.objectPath + "#" + methodName;
+	
+	this.service.registerMethod(methodId, methodHandler);
 };
 
 NDEFAgent.prototype = new nfc.NDEFAgent();

@@ -118,6 +118,7 @@
     	ndefLog.innerHTML += "<br><b>main: agentAddedSuccessCB</b><br>";
     	ndefAgent = NDEFAgent;
     }
+    
     function NdefAgentErrorCB(error) {
     	ndefLog.innerHTML += "<br>main: agentAddedErrorCB: <b>" + error + "</b>";
     }
