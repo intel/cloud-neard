@@ -1,0 +1,397 @@
+<!doctype html>
+<html lang="en">
+
+	<head>
+		<meta charset="utf-8">
+
+		<title>NFC Web APIs</title>
+
+		<meta name="description" content="NFC Web APIs by the W3C Near field communications (NFC) working group">
+		<meta name="author" content="Luc Yriarte">
+
+		<meta name="apple-mobile-web-app-capable" content="yes" />
+		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+		<link rel="stylesheet" href="css/reveal.min.css">
+		<link rel="stylesheet" href="css/theme/otc.css" id="theme">
+
+		<!-- For syntax highlighting -->
+		<link rel="stylesheet" href="lib/css/zenburn.css">
+
+		<!-- If the query includes 'print-pdf', use the PDF print sheet -->
+		<script>
+			document.write( '<link rel="stylesheet" href="css/print/' + ( window.location.search.match( /print-pdf/gi ) ? 'pdf' : 'paper' ) + '.css" type="text/css" media="print">' );
+		</script>
+
+		<!--[if lt IE 9]>
+		<script src="lib/js/html5shiv.js"></script>
+		<![endif]-->
+		
+		<script src="lib/js/autobahn.min.js"></script>
+		<script src="lib/js/cloudeebus.js"></script>
+		<script src="lib/js/nfc.js"></script>
+		<script type="text/javascript">
+		function log(str) {
+			window.logArea.innerHTML+=str+"\n";
+		}
+		function evalContent(nodeId) {
+			eval(
+				"window.logArea=document.getElementById(nodeId + '_log');" +
+				"window.logArea.innerHTML='';" +
+				"var lambda = function() {" +
+					document.getElementById(nodeId).textContent +
+				"};" + 
+				"lambda();"
+			);
+		}
+		</script>
+		
+	</head>
+
+	<body>
+
+
+		<div class="reveal">
+
+			<!-- Any section element inside of this container is displayed as a slide -->
+			<div class="slides">
+
+
+				<section>
+					<h1>NFC Web APIs</h1>
+					<br>
+					<h2>an open-source implementation</h2>
+					<br>
+					<footer>
+						<small>
+						<p><a href="http://www.w3.org/wiki/Near_field_communications_%28NFC%29">http://www.w3.org/wiki/Near_field_communications_(NFC)</a></p>
+						<p>Luc Yriarte / luc.yriarte@intel.com</p>
+						</small>
+						<img src="images/otc-bar.png" style="background:none;border:none;box-shadow:none;margin:none;width:100%"/>
+					</footer>
+				</section>
+
+
+				<section>
+					<h2><a href="http://www.w3.org/wiki/Near_field_communications_%28NFC%29">W3C NFC working group</a></h2>
+					<h3>Specify HTML5 APIs</h3>
+					<ul>
+					<li>Read / write NDEF messages on NFC tags
+					<li>Exchange NDEF messages with NFC-enabled devices
+					<li>Card emulation, bluetooth handover, LLCP HTML5 messaging...
+					</ul>
+				</section>
+
+
+				<section>
+					<h2><a href="http://www.w3.org/wiki/Near_field_communications_%28NFC%29">W3C NFC working group</a></h2>
+					<h3>API draft proposal</h3>
+					<ul>
+					<li><a href="http://w3c.github.com/nfc/proposals/intel/nfc.html">Intel / Tizen</a>: Tag, peer, handover...
+					<li><a href="http://w3c.github.com/nfc/proposals/webinos/nfc.html">Webinos</a>: Tag, peer, LLCP...
+					<li>Actively looking for other candidates
+					</ul>
+					<br>
+					<b><a href="http://lists.w3.org/Archives/Public/public-nfc/">public-nfc@w3.org</a></b>
+				</section>
+
+
+				<section>
+
+				<section>
+					<h2><a href="https://01.org/linux-nfc/">Neard NFC stack</a></h2>
+					<ul>
+					<li>Official NFC Linux kernel stack
+					<li>Kernel space NFC core / hardware drivers
+					<li>User space NFC daemon / <a href="http://git.kernel.org/?p=network/nfc/neard.git;a=tree;f=doc;hb=HEAD">DBus API</a>
+					</ul>
+				</section>
+
+				<section>
+					<h3>Neard architecture</h3>
+					<img src="images/neard.png" style="background:none;border:none;box-shadow:none;margin:none;max-height:60%"/>
+				</section>
+				
+				</section>
+
+
+				<section>
+
+				<section>
+					<h2>Javascript APIs implementation</h2>
+					<ul>
+					<li>Web runtime
+					<li>Navigator plugins
+					<li>Javascript shim layer
+					</ul>
+				</section>
+
+				<section>
+					<h3>Javascript / Websockets</h3>
+					<img src="images/nfc-js-block.png" style="background:none;border:none;box-shadow:none;margin:none;max-height:60%"/>
+				</section>
+				
+				</section>
+
+
+				<section>
+					<h2>Demo</h2>
+					<ul>
+					<li><a href="#/6">NDEF Messages</a>
+					<li><a href="#/8">NFC tags</a>
+					<li><a href="#/10">Peer to peer</a>
+					<li><a href="#/12">Bluetooth handover</a>
+					</ul>
+				</section>
+
+
+				<section>
+					<h3><a href="nfc.html#interface-ndefmessage">NDEF messages</a></h3>
+					<pre><code contenteditable id="script_3">window.logNDEF = function(msg) {
+  for (var i=0; i&lt;msg.records.length; i++) {
+    var rec=msg.records[i];
+    if (rec.text)
+      log(rec.text);
+    else if (rec.uri) {
+      log("&lt;a href='" + rec.uri + "'&gt;" + rec.uri + "&lt;/a&gt;");
+      window.open(rec.uri);
+     }
+  }
+}
+
+window.ndef = new NDEFMessage(
+  [new NDEFRecordURI("nfc.html#interface-ndefmessage")]
+  );
+
+window.logNDEF(window.ndef);</code></pre>
+					<input type="button" value="Try me" onclick="evalContent('script_3')"/>
+					<pre id="script_3_log"></pre>
+				</section>
+
+
+				<section>
+					<h3><a href="nfc.html#interface-nfcmanager">Accessing NFC adapter</a></h3>
+					<pre><code contenteditable id="script_1">function managerOk() {
+  window.nfcAdapter = nfc.getDefaultAdapter();
+  window.nfcAdapter.setPowered(true, 
+    function() {
+      log("Adapter powered: " + window.nfcAdapter.powered);
+    }, 
+    log);
+}
+
+nfc.init("ws://localhost:9001", null,
+  managerOk, log);</code></pre>
+					<input type="button" value="Try me" onclick="evalContent('script_1')"/>
+					<pre id="script_1_log"></pre>
+				</section>
+
+
+				<section>
+					<h3><a href="nfc.html#interface-nfctagdetectcallback">Reading NFC Tags</a></h3>
+					<pre><code contenteditable id="script_2">window.nfcAdapter.setTagListener({
+  onattach: function(tag) {
+    log("Found tag: " + tag.type);
+    tag.readNDEF(window.logNDEF);
+  },
+  ondetach: function() {
+    log("tag detached");
+  }});
+  
+window.nfcAdapter.setPolling(true, 
+  function() {
+    log("Adapter polling: " + window.nfcAdapter.polling);
+  }, 
+  log);</code></pre>
+					<input type="button" value="Try me" onclick="evalContent('script_2')"/>
+					<pre id="script_2_log"></pre>
+				</section>
+
+
+				<section>
+					<h3><a href="nfc.html#interface-nfctag">Writing on NFC Tags</a></h3>
+					<pre><code contenteditable id="script_2bis">window.nfcAdapter.setTagListener({
+  onattach: function(tag) {
+    log("Found tag: " + tag.type);
+    tag.writeNDEF(window.ndef,
+      function() {
+        log("tag written");
+      },
+      log);
+  },
+  ondetach: function() {
+    log("tag detached");
+  }
+});</code></pre>
+					<input type="button" value="Try me" onclick="evalContent('script_2bis')"/>
+					<pre id="script_2bis_log"></pre>
+				</section>
+
+
+				<section>
+					<h3><a href="nfc.html#interface-nfcpeerdetectcallback">Detecting NFC Peer devices</a></h3>
+					<pre><code contenteditable id="script_4">window.nfcAdapter.setPeerListener({
+  onattach: function(peer) {
+    log("Found peer device");
+    peer.setReceiveNDEFListener(window.logNDEF);
+  },
+  ondetach: function() {
+    log("peer device detached");
+  }
+});</code></pre>
+					<input type="button" value="Try me" onclick="evalContent('script_4')"/>
+					<pre id="script_4_log"></pre>
+				</section>
+
+
+				<section>
+					<h3><a href="nfc.html#interface-nfcpeer">Sending NDEF messages to peer devices</a></h3>
+					<pre><code contenteditable id="script_5">window.nfcAdapter.setPeerListener({
+  onattach: function(peer) {
+    log("Found peer device");
+    peer.sendNDEF(window.ndef,
+      function() {
+        log("Message sent");
+      },
+      log);
+  },
+  ondetach: function() {
+    log("peer device detached");
+  }
+});</code></pre>
+					<input type="button" value="Try me" onclick="evalContent('script_5')"/>
+					<pre id="script_5_log"></pre>
+				</section>
+
+
+				<section>
+
+
+				<section>
+					<h3><a href="nfc.html#interface-nfcpeer">Bluetooth pairing via NFC</a></h3>
+					<pre><code contenteditable id="script_6">window.nfcAdapter.setPeerListener({
+  onattach: function(peer) {
+    window.peer = peer;
+    log("Found peer device");
+    peer.startHandover(
+      "bluetooth",
+      function() {
+        log("Bluetooth pairing success");
+      },
+      log);
+  },
+  ondetach: function() {
+    window.peer = null;
+    log("peer device detached");
+  }
+});</code></pre>
+					<input type="button" value="Try me" onclick="evalContent('script_6')"/>
+					<pre id="script_6_log"></pre>
+				</section>
+
+				<section>
+					<h3>Bluetooth adapter</h3>
+					<pre><code contenteditable id="script_6_1">cloudeebus.SystemBus().getObject("org.bluez","/",
+  function(btmgr) {
+    btmgr.DefaultAdapter(function(objpath) {
+      cloudeebus.SystemBus().getObject("org.bluez",objpath,
+        function(obj) {
+          window.btAdapter = obj;
+          log("Bluetooth adapter found");
+        },
+        log);
+    },
+    log);
+  },
+  log);</code></pre>
+					<input type="button" value="Try me" onclick="evalContent('script_6_1')"/>
+					<pre id="script_6_1_log"></pre>
+				</section>
+
+				<section>
+					<h3>Bluetooth devices list</h3>
+					<pre><code contenteditable id="script_6_2">window.btAdapter.ListDevices(
+  function(objpathes) {
+    for (var i=0; i&lt;objpathes.length; i++) {
+      var obj = cloudeebus.SystemBus().getObject("org.bluez",objpathes[i]);
+      obj.callMethod("org.bluez.Device","GetProperties", [],
+        function(props) {
+          log(props.Name + ": " + (props.Connected ? "" : "not ") + "connected");
+        },
+        log);
+    }
+  },
+  log);</code></pre>
+					<input type="button" value="Try me" onclick="evalContent('script_6_2')"/>
+					<pre id="script_6_2_log"></pre>
+				</section>
+
+				<section>
+					<h3>Bluetooth devices cleanup</h3>
+					<pre><code contenteditable id="script_6_3">window.btAdapter.ListDevices(
+  function(objpathes) {
+    for (var i=0; i&lt;objpathes.length; i++) {
+      log("removing: " + objpathes[i]);
+      window.btAdapter.RemoveDevice(objpathes[i],
+        function() {log("done")},
+        log);
+    }
+  },
+  log);</code></pre>
+					<input type="button" value="Try me" onclick="evalContent('script_6_3')"/>
+					<pre id="script_6_3_log"></pre>
+				</section>
+
+
+				</section>
+
+
+				<section>
+					<h1>Thanks !</h1>
+					<br>
+					<footer>
+						<small>
+						<p><a href="http://www.w3.org/wiki/Near_field_communications_%28NFC%29">http://www.w3.org/wiki/Near_field_communications_(NFC)</a></p>
+						<p>Luc Yriarte / luc.yriarte@intel.com</p>
+						</small>
+						<img src="images/otc-bar.png" style="background:none;border:none;box-shadow:none;margin:none;width:100%"/>
+					</footer>
+				</section>
+
+
+			</div>
+
+		</div>
+
+		<script src="lib/js/head.min.js"></script>
+		<script src="js/reveal.min.js"></script>
+
+		<script>
+
+			// Full list of configuration options available here:
+			// https://github.com/hakimel/reveal.js#configuration
+			Reveal.initialize({
+				controls: true,
+				progress: true,
+				history: true,
+				center: true,
+
+				theme: Reveal.getQueryHash().theme, // available themes are in /css/theme
+				transition: Reveal.getQueryHash().transition || 'default', // default/cube/page/concave/zoom/linear/none
+
+				// Optional libraries used to extend on reveal.js
+				dependencies: [
+					{ src: 'lib/js/classList.js', condition: function() { return !document.body.classList; } },
+					{ src: 'plugin/markdown/showdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+					{ src: 'plugin/markdown/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+					{ src: 'plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } },
+					{ src: 'plugin/zoom-js/zoom.js', async: true, condition: function() { return !!document.body.classList; } },
+					{ src: 'plugin/notes/notes.js', async: true, condition: function() { return !!document.body.classList; } }
+					// { src: 'plugin/remotes/remotes.js', async: true, condition: function() { return !!document.body.classList; } }
+				]
+			});
+
+		</script>
+
+	</body>
+</html>
