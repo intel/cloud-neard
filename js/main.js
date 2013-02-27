@@ -17,7 +17,7 @@
 		// init NFC global objects
 		if (error) {
 			adapter = null;
-			debugLog(error)
+			debugLog(error);
 		} else {
 			adapter = nfc.getDefaultAdapter();
 			adapter.setPowered(true);
@@ -114,17 +114,46 @@
     }
 
     // NDEF Agent Management
-    function NdefAgentSuccessCB(NDEFAgent) {
-    	ndefLog.innerHTML += "<br><b>main: agentAddedSuccessCB</b><br>";
+    function ndefLog_func(log_str) {
+    	ndefLog.innerHTML += "<br>" + log_str;
+   }
+    
+    function NdefAgentRegisterSuccessCB(NDEFAgent) {
+    	ndefLog.innerHTML += "<br><b>main: NdefAgentRegisterSuccessCB</b><br>";
     	ndefAgent = NDEFAgent;
     }
     
-    function NdefAgentErrorCB(error) {
-    	ndefLog.innerHTML += "<br>main: agentAddedErrorCB: <b>" + error + "</b>";
+    function NdefAgentRegisterErrorCB(error) {
+    	ndefLog.innerHTML += "<br>main: NdefAgentRegisterErrorCB: <b>" + error.desc + "</b>";
     }
     
     function registerNDEFAgent(tagType) {
-    	nfc.registerNdefAgent(tagType, NdefAgentSuccessCB, NdefAgentErrorCB);
+    	nfc.registerNdefAgent(tagType, ndefLog_func, NdefAgentRegisterSuccessCB, NdefAgentRegisterErrorCB);
+    }
+    
+    function NdefAgentReleaseSuccessCB(NDEFAgent) {
+    	ndefLog.innerHTML += "<br><b>main: NdefAgentReleaseSuccessCB</b><br>";
+    	ndefAgent = null;
+    }
+    
+    function NdefAgentReleaseErrorCB(error) {
+    	ndefLog.innerHTML += "<br>main: NdefAgentReleaseErrorCB: <b>" + error.desc + "</b>";
+    }
+    
+    function unregisterNDEFAgent(tagType) {
+    	nfc.unregisterNdefAgent(tagType, NdefAgentReleaseSuccessCB, NdefAgentReleaseErrorCB);
+    }
+    
+    function serviceReleaseSuccessCB(service) {
+    	ndefLog.innerHTML += "<br><b>main: serviceReleaseSuccessCB</b><br>";
+    }
+    
+    function serviceReleaseErrorCB(error) {
+    	ndefLog.innerHTML += "<br>main: serviceReleaseErrorCB: <b>" + error + "</b>";
+    }
+    
+    function unregisterService() {
+    	nfc.unregisterService(serviceReleaseSuccessCB, serviceReleaseErrorCB);
     }
     
     

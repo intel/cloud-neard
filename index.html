@@ -56,6 +56,8 @@
 		<td><h3>Register NDEF Agent</h3>
 		<input type="text" value="urn:nfc:wkt:U" name="tagType" id="recordTagType"/><br>
 		<input type="button" value="Register NDEF Agent" onClick="registerNDEFAgent(recordTagType.value)"/>
+		<br><input type="button" value="Unregister NDEF Agent" onClick="unregisterNDEFAgent(recordTagType.value)"/>
+		<br><input type="button" value="Unregister service" onClick="unregisterService()"/>
 		<div id="ndefLog" class="content" style="min-height:40px"></div>
 		</td>
 	</tr>
