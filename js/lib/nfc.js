@@ -79,6 +79,7 @@ nfc.registerNdefAgent = function(tagType, log_func, successCB, errorCB) {
 	
 	function ReleaseMethodHandler(methodId) {
 		
+		self.log(arguments.callee.name, methodId);
 		ndefAgent.returnMethod(methodId, 
 				   success=true, 
 				   result=null, 
@@ -88,7 +89,8 @@ nfc.registerNdefAgent = function(tagType, log_func, successCB, errorCB) {
 
 	function GetNDEFMethodHandler(methodId, args) {
 		
-		self.log(arguments.callee.name + ":" + args);
+		self.log(arguments.callee.name, "Records=" + args.Records);
+		self.log(arguments.callee.name, "NDEF=" + args.NDEF);
 		
 		ndefAgent.returnMethod(methodId, 
 				   success=true, 
@@ -97,11 +99,11 @@ nfc.registerNdefAgent = function(tagType, log_func, successCB, errorCB) {
 				   errorCB=null);
 	}
 
-	function agentAddSucessCB(agent) {		
-		self.log(arguments.callee.name + ". Agent: '" + agent + "' added!");
-		self.log(arguments.callee.name + "-> register method Release");
+	function NdefAgentAddedSucessCB(agent) {		
+		self.log(arguments.callee.name, ". Agent: '" + agent + "' added!");
+		self.log(arguments.callee.name, "-> register method Release");
 		self.ndefAgent.registerMethod("Release", ReleaseMethodHandler);
-		self.log(arguments.callee.name + "-> register method GetNDEF");
+		self.log(arguments.callee.name, "-> register method GetNDEF");
 		self.ndefAgent.registerMethod("GetNDEF", GetNDEFMethodHandler);
 		if (successCB) {
 			try { // NDEF object added successfully, invoking success callback of the main code (with ndefAgent instance).
@@ -113,11 +115,11 @@ nfc.registerNdefAgent = function(tagType, log_func, successCB, errorCB) {
 		}
 	}
 
-	function NdefServiceAddSuccessCB() {
+	function NdefServiceAddedSuccessCB(serviceName) {
 		if (successCB) {
 			try { // Adding NDEF object (interface & method) to the newly created service
-				self.log(arguments.callee.name + "-> self.ndefAgent.addAgent()");
-				self.ndefAgent.addAgent(agentAddSucessCB, errorCB);
+				self.log(arguments.callee.name, serviceName+ " -> self.ndefAgent.addAgent()");
+				self.ndefAgent.addAgent(NdefAgentAddedSucessCB, errorCB);
 			}
 			catch (e) {
 				alert(arguments.callee.name + "-> Method callback exception: " + e);
@@ -127,8 +129,8 @@ nfc.registerNdefAgent = function(tagType, log_func, successCB, errorCB) {
 
 	self.log = log_func;
 	self.ndefAgent = new NDEFAgent(nfc.service, tagType);
-	self.log(arguments.callee.name + "-> self.ndefAgent.addService()");
-	self.ndefAgent.addService(NdefServiceAddSuccessCB, errorCB);		
+	self.log(arguments.callee.name, "-> self.ndefAgent.addService()");
+	self.ndefAgent.addService(NdefServiceAddedSuccessCB, errorCB);		
 };
 
 nfc.unregisterNdefAgent = function(tagType, successCB, errorCB) {
@@ -421,7 +423,7 @@ nfc.NDEFAgent.prototype.addService = function(successCB, errorCB) {
 		self.service = cloudeebusService;
 		if (successCB) {
 			try { // calling dbus hook object function for un-translated types
-				successCB(cloudeebusService);
+				successCB(cloudeebusService.name);
 			}
 			catch (e) {
 				alert(arguments.callee.name + "-> Method callback exception: " + e);
@@ -433,7 +435,26 @@ nfc.NDEFAgent.prototype.addService = function(successCB, errorCB) {
 };
 
 nfc.NDEFAgent.prototype.addAgent = function(successCB, errorCB) {
-	this.service.addAgent(this.objectPath, this.xmlTemplate, successCB, errorCB);
+	var self = this;
+
+	function registerNDEFAgentSuccessCB() {
+		// Agent created and registered successfully
+		if (successCB) {
+			try { // calling dbus hook object function for un-translated types
+				successCB(self.objectPath);
+			}
+			catch (e) {
+				alert(arguments.callee.name + "-> Method callback exception: " + e);
+			}
+		}
+	}
+	
+	function NDEFAgentAddSuccessCB() {
+		// Registering service for Neard
+		nfc.manager.RegisterNDEFAgent(self.objectPath, self.tagType, registerNDEFAgentSuccessCB, errorCB);
+	}
+	
+	this.service.addAgent(this.objectPath, this.xmlTemplate, NDEFAgentAddSuccessCB, errorCB);
 };
 
 nfc.NDEFAgent.prototype.registerMethod = function(methodName, methodHandler) {
