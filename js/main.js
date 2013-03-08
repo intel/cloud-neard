@@ -130,7 +130,22 @@
 	//
 
 	var init = function () {
-		var cloudeebusURI = "ws://localhost:9000";
+		var cloudeebusHost = "localhost";
+		var cloudeebusPort = "9000";
+		var queryString = window.location.toString().split("\?")[1];
+		if (queryString) {
+			var getVars = queryString.split("\&");
+			for (var i=0; i<getVars.length; i++) {
+				var varVal = getVars[i].split("\=");
+				if (varVal.length == 2) {
+					if (varVal[0] == "host")
+						cloudeebusHost = varVal[1];
+					else if (varVal[0] == "port")
+						cloudeebusPort = varVal[1];
+				}
+			}
+		}
+		var cloudeebusURI = "ws://" + cloudeebusHost + ":" + cloudeebusPort;
 		nfc.init(cloudeebusURI, 
 				manifest,
 				initPage,
