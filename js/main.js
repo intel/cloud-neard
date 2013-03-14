@@ -73,52 +73,65 @@
 
     // NFC Tag write callback
     var messageToWrite;
-	function writeOnAttach(nfcTag) {
+
+    function writeSuccess() {
+		if (messageToWrite.records[0].text)
+			writeLog.innerHTML = "<b>Wrote text message:</b> " + 
+								messageToWrite.records[0].text;
+		else if (messageToWrite.records[0].uri)
+			writeLog.innerHTML = "<b>Wrote URI:</b> " + 
+								messageToWrite.records[0].uri;
+		else
+			writeLog.innerHTML = "<b>Wrote undefined content</b> ";
+	}
+	
+	function writeError(err) {
+		writeLog.innerHTML = "<b>Writing failed</b><br>";
+		writeLog.innerHTML += err;
+	}
+    
+	function tagWriteOnAttach(nfcTag) {
 		if (!messageToWrite)
 			alert("No message to write");
-		nfcTag.writeNDEF(messageToWrite, function() {
-			if (messageToWrite.records[0].text)
-				writeLog.innerHTML = "<b>Wrote text message:</b> " + 
-									messageToWrite.records[0].text;
-			else if (messageToWrite.records[0].uri)
-				writeLog.innerHTML = "<b>Wrote URI:</b> " + 
-									messageToWrite.records[0].uri;
-			else
-				writeLog.innerHTML = "<b>Wrote undefined content</b> ";
-		},
-		function(err) {
-			writeLog.innerHTML = "<b>Writing failed</b><br>";
-			writeLog.innerHTML += err;
-		});
+		nfcTag.writeNDEF(messageToWrite, writeSuccess, writeError);
+	}    
+
+	function peerWriteOnAttach(nfcPeer) {
+		if (!messageToWrite)
+			alert("No message to send");
+		nfcPeer.sendNDEF(messageToWrite, writeSuccess, writeError);
 	}    
 
 	function writeOnDetach() {
 		outLog.innerHTML += "<br><b>Tag / Peer detached</b><br>";
 		adapter.unsetTagListener();
+		adapter.unsetPeerListener();
 	}
 	
-    // Manage NFC Tag writing
+    // Manage NDEF message writing
+
+    function writeMessage() {
+		adapter.setTagListener({onattach: tagWriteOnAttach, ondetach: writeOnDetach});
+		adapter.setPeerListener({onattach: peerWriteOnAttach, ondetach: writeOnDetach});
+		adapter.setPolling(true);
+    }
+
     function writeRecordURL(content) {
 		readNFCTag(false);
 		writeLog.innerHTML = "Approach Tag / Peer to write URI...";
 		var record = new NDEFRecordURI(content);
 		messageToWrite = new NDEFMessage([record]);
-		adapter.setTagListener({onattach: writeOnAttach, ondetach: function() {
-			outLog.innerHTML += "<br><b>URI was written, detached</b><br>";
-			adapter.unsetTagListener();
-			}
-		});
-		adapter.setPolling(true);
+		writeMessage();
     }
+
     function writeRecordText(content) {
 		readNFCTag(false);
 		writeLog.innerHTML = "Approach Tag / Peer to write Text...";
 		var record = new NDEFRecordText(content,"en-US","UTF-8");
 		messageToWrite = new NDEFMessage([record]);
-		adapter.setTagListener({onattach: writeOnAttach, ondetach: writeOnDetach});
-		adapter.setPolling(true);
+		writeMessage();
     }
-
+    
 	//
 	// Debug log function
 	//
