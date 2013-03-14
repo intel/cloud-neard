@@ -55,11 +55,11 @@
 		adapter.setPolling(enabled);
 		if (enabled) {
 			adapter.setTagListener({onattach: readOnAttach, ondetach: function(){outLog.innerHTML += "<br><b>Tag was read, detached</b><br>";}});
-			document.tagManagement.tagListener[0].checked="true";
+			document.tagManagement.tagListener.selectedIndex=1;
 		}
 		else {
 			adapter.unsetTagListener();
-			document.tagManagement.tagListener[1].checked="true";
+			document.tagManagement.tagListener.selectedIndex=0;
 		}
 	}
 

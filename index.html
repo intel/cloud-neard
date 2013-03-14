@@ -28,8 +28,10 @@
 	<table style="width:100%">
 	<tr>
 		<td><h3>Read NDEF Message</h3>
-		<input type="radio" name="tagListener" value="set" onClick="readNFCTag(true)"/>Register read callback<br>
-		<input type="radio" name="tagListener" value="unset" onClick="readNFCTag(false)"/>Unregister read callback<br>
+		<select id="tagListener" onchange="readNFCTag(this.selectedIndex)" >
+			<option selected="selected">Not listening</option>
+			<option>Listening</option>
+		</select>
 		</td>
 		<td><h3>Write NDEF Message</h3>
 		<input type="text" name="recordContent" id="recordContentText"/><br>
