@@ -27,16 +27,16 @@
 	</header>
 	<table style="width:100%">
 	<tr>
-		<td><h3>Read NDEF Message</h3>
+		<td style="width:30%"><h3>Read NDEF Message</h3>
 		<select id="tagListener" onchange="readNFCTag(this.selectedIndex)" >
 			<option selected="selected">Not listening</option>
 			<option>Listening</option>
 		</select>
 		</td>
-		<td><h3>Write NDEF Message</h3>
-		<input type="text" name="recordContent" id="recordContentText"/><br>
-		<input type="button" value="write URL" onClick="writeRecordURL(recordContent.value)"/>
-		<input type="button" value="write Text" onClick="writeRecordText(recordContent.value)"/><br>
+		<td style="width:70%"><h3>Write NDEF Message</h3>
+		<input type="text" style="width:80%" name="recordContent" id="recordContentText"/><br>
+		<input type="button" style="width:40%" value="write URL" onClick="writeRecordURL(recordContent.value)"/>
+		<input type="button" style="width:40%" value="write Text" onClick="writeRecordText(recordContent.value)"/><br>
 		<div id="writeLog" class="content" style="min-height:40px"></div>
 		</td>
 	</tr>
