@@ -49,16 +49,23 @@
 		nfcTag.readNDEF(logMessage);
 	}
 	
+    // NFC Peer read callback
+    function peerOnAttach(peer) {
+		outLog.innerHTML += "<br><b>Peer detected</b><br>";
+		peer.setReceiveNDEFListener(logMessage);
+	}
 
     // Manage NFC Tag reading
 	function readNFCTag(enabled) {
 		adapter.setPolling(enabled);
 		if (enabled) {
 			adapter.setTagListener({onattach: readOnAttach, ondetach: function(){outLog.innerHTML += "<br><b>Tag was read, detached</b><br>";}});
+			adapter.setPeerListener({onattach: peerOnAttach, ondetach: function(){outLog.innerHTML += "<br><b>Peer detached</b><br>";}});
 			document.tagManagement.tagListener.selectedIndex=1;
 		}
 		else {
 			adapter.unsetTagListener();
+			adapter.unsetPeerListener();
 			document.tagManagement.tagListener.selectedIndex=0;
 		}
 	}
@@ -86,22 +93,26 @@
 	}    
 
 	function writeOnDetach() {
-		outLog.innerHTML += "<br><b>Tag detached</b><br>";
+		outLog.innerHTML += "<br><b>Tag / Peer detached</b><br>";
 		adapter.unsetTagListener();
 	}
 	
     // Manage NFC Tag writing
     function writeRecordURL(content) {
 		readNFCTag(false);
-		writeLog.innerHTML = "Approach Tag to write URI...";
+		writeLog.innerHTML = "Approach Tag / Peer to write URI...";
 		var record = new NDEFRecordURI(content);
 		messageToWrite = new NDEFMessage([record]);
-		adapter.setTagListener({onattach: writeOnAttach, ondetach: writeOnDetach});
+		adapter.setTagListener({onattach: writeOnAttach, ondetach: function() {
+			outLog.innerHTML += "<br><b>URI was written, detached</b><br>";
+			adapter.unsetTagListener();
+			}
+		});
 		adapter.setPolling(true);
     }
     function writeRecordText(content) {
 		readNFCTag(false);
-		writeLog.innerHTML = "Approach Tag to write Text...";
+		writeLog.innerHTML = "Approach Tag / Peer to write Text...";
 		var record = new NDEFRecordText(content,"en-US","UTF-8");
 		messageToWrite = new NDEFMessage([record]);
 		adapter.setTagListener({onattach: writeOnAttach, ondetach: writeOnDetach});
