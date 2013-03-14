@@ -69,38 +69,42 @@
 	function writeOnAttach(nfcTag) {
 		if (!messageToWrite)
 			alert("No message to write");
-		nfcTag.writeNDEF(messageToWrite);
-		if (messageToWrite.records[0].text)
-			writeLog.innerHTML = "<b>Wrote text message:</b> " + 
-								messageToWrite.records[0].text;
-		else if (messageToWrite.records[0].uri)
-			writeLog.innerHTML = "<b>Wrote URI:</b> " + 
-								messageToWrite.records[0].uri;
-		else
-			writeLog.innerHTML = "<b>Wrote undefined content</b> ";
+		nfcTag.writeNDEF(messageToWrite, function() {
+			if (messageToWrite.records[0].text)
+				writeLog.innerHTML = "<b>Wrote text message:</b> " + 
+									messageToWrite.records[0].text;
+			else if (messageToWrite.records[0].uri)
+				writeLog.innerHTML = "<b>Wrote URI:</b> " + 
+									messageToWrite.records[0].uri;
+			else
+				writeLog.innerHTML = "<b>Wrote undefined content</b> ";
+		},
+		function(err) {
+			writeLog.innerHTML = "<b>Writing failed</b><br>";
+			writeLog.innerHTML += err;
+		});
 	}    
 
+	function writeOnDetach() {
+		outLog.innerHTML += "<br><b>Tag detached</b><br>";
+		adapter.unsetTagListener();
+	}
+	
     // Manage NFC Tag writing
     function writeRecordURL(content) {
 		readNFCTag(false);
+		writeLog.innerHTML = "Approach Tag to write URI...";
 		var record = new NDEFRecordURI(content);
 		messageToWrite = new NDEFMessage([record]);
-		adapter.setTagListener({onattach: writeOnAttach, ondetach: function() {
-			outLog.innerHTML += "<br><b>URI was written, detached</b><br>";
-			adapter.unsetTagListener();
-			}
-		});
+		adapter.setTagListener({onattach: writeOnAttach, ondetach: writeOnDetach});
 		adapter.setPolling(true);
     }
     function writeRecordText(content) {
 		readNFCTag(false);
+		writeLog.innerHTML = "Approach Tag to write Text...";
 		var record = new NDEFRecordText(content,"en-US","UTF-8");
 		messageToWrite = new NDEFMessage([record]);
-		adapter.setTagListener({onattach: writeOnAttach, ondetach: function() {
-			outLog.innerHTML += "<br><b>Text was written, detached</b><br>";
-			adapter.unsetTagListener();
-			}
-		});
+		adapter.setTagListener({onattach: writeOnAttach, ondetach: writeOnDetach});
 		adapter.setPolling(true);
     }
 
