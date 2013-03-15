@@ -114,8 +114,8 @@
     }
 
     // NDEF Agent Management
-    function ndefLog_func(log_str) {
-    	ndefLog.innerHTML += "<br>" + log_str;
+    function ndefLog_func(func_name, log_str) {
+    	ndefLog.innerHTML += "<br><b>" + func_name + "</b> : " + log_str;
    }
     
     function NdefAgentRegisterSuccessCB(NDEFAgent) {
