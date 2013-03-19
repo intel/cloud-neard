@@ -27,7 +27,8 @@ nfc.reset = function() {
 	nfc.manager = null;
 	nfc.adapter = null;
 	nfc.defaultAdapter = null;
-	nfc.service = "org.cloudeebus";
+	nfc.serviceName = "org.cloudeebus";
+	nfc.serviceCreated = false;
 };
 
 
@@ -115,10 +116,11 @@ nfc.registerNdefAgent = function(tagType, log_func, successCB, errorCB) {
 		}
 	}
 
-	function NdefServiceAddedSuccessCB(serviceName) {
+	function ServiceAddedSuccessCB(serviceName) {
+		nfc.serviceCreated = true;
 		if (successCB) {
 			try { // Adding NDEF object (interface & method) to the newly created service
-				self.log(arguments.callee.name, serviceName+ " -> self.ndefAgent.addAgent()");
+				self.log(arguments.callee.name, "Adding NDEF agent to service '" + serviceName + "'");
 				self.ndefAgent.addAgent(NdefAgentAddedSucessCB, errorCB);
 			}
 			catch (e) {
@@ -128,22 +130,65 @@ nfc.registerNdefAgent = function(tagType, log_func, successCB, errorCB) {
 	}
 
 	self.log = log_func;
-	self.ndefAgent = new NDEFAgent(nfc.service, tagType);
+	self.ndefAgent = new NDEFAgent(nfc.serviceName, tagType);
 	self.log(arguments.callee.name, "-> self.ndefAgent.addService()");
-	self.ndefAgent.addService(NdefServiceAddedSuccessCB, errorCB);		
+	// Create service if needed
+	if (nfc.serviceCreated == false) {
+		nfc.bus.addService(nfc.serviceName, ServiceAddedSuccessCB, errorCB);
+	} else {
+		// Adding directly agent if service already exist
+		self.ndefAgent.addAgent(NdefAgentAddedSucessCB, errorCB);
+	}
 };
 
 nfc.unregisterNdefAgent = function(tagType, successCB, errorCB) {
 	var self = this;
 	
-	function NDEFAgentRemoveSucessCB() {		
-		self.log(arguments.callee.name);
+	function NDEFAgentRemoveSucessCB(agent) {		
+		self.log(arguments.callee.name, agent + " removed!");
+		if (successCB) {
+			try { // NDEF object added successfully, invoking success callback of the main code (with ndefAgent instance).
+				successCB(agent);
+			}
+			catch (e) {
+				alert(arguments.callee.name + "-> Method callback exception: " + e);
+			}
+		}
 	}
 
 	self.ndefAgent.remove(NDEFAgentRemoveSucessCB, errorCB);		
 };
 
-
+nfc.unregisterService = function(successCB, errorCB) {
+	var self = this;
+	
+	function ServiceRemovedSuccessCB(serviceName) {
+		nfc.serviceCreated = false;
+		if (successCB) {
+			try {
+				self.log(arguments.callee.name, "Service '" + serviceName + "' removed!");
+				successCB(serviceName);
+			}
+			catch (e) {
+				alert(arguments.callee.name + "-> Method callback exception: " + e);
+			}
+		}
+	}
+	
+	function NDEFAgentUnregistered() {
+		if (nfc.serviceCreated == true) {
+			nfc.bus.removeService(nfc.serviceName, ServiceRemovedSuccessCB, errorCB);
+		} else {
+			ServiceRemovedSuccessCB(nfc.serviceName);
+		}
+	}
+	
+	if (this.ndefAgent.neardRegistered == true) {
+		nfc.unregisterNdefAgent(this.ndefAgent.tagType, NDEFAgentUnregistered, errorCB);
+	} else {
+		NDEFAgentUnregistered();
+	}
+};
 
 /*****************************************************************************/
 
@@ -532,8 +577,7 @@ nfc.NDEFRecordForProps = function(props) {
 nfc.NDEFAgent = function(service) {
 	this.srvName = service;
 	this.tagType = null;
-	this.objectCreated = false;
-	this.service = null;
+	this.neardRegistered = false;
 	return this;
 };
 
@@ -547,29 +591,12 @@ NDEFAgent = function(service, tagType, successCB, errorCB) {
 	this.xmlTemplate = '<!DOCTYPE node PUBLIC "-//freedesktop//DTD D-BUS Object Introspection 1.0//EN"\n"http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd">\n<node><interface name="org.neard.NDEFAgent"><method name="GetNDEF"><arg name="values" type="a{sv}" direction="in"/></method><method name="Release"></method></interface></node>';
 };
 
-nfc.NDEFAgent.prototype.addService = function(successCB, errorCB) {
-	var self = this;
-	
-	function NDEFserviceAddSuccessCB(cloudeebusService) {
-		self.service = cloudeebusService;
-		if (successCB) {
-			try { // calling dbus hook object function for un-translated types
-				successCB(cloudeebusService.name);
-			}
-			catch (e) {
-				alert(arguments.callee.name + "-> Method callback exception: " + e);
-			}
-		}
-	}
-
-	nfc.bus.addService(this.srvName, NDEFserviceAddSuccessCB, errorCB);
-};
-
 nfc.NDEFAgent.prototype.addAgent = function(successCB, errorCB) {
 	var self = this;
 
-	function registerNDEFAgentSuccessCB() {
+	function NeardNDEFAgentRegisteredSuccessCB() {
 		// Agent created and registered successfully
+		self.neardRegistered = true;
 		if (successCB) {
 			try { // calling dbus hook object function for un-translated types
 				successCB(self.objectPath);
@@ -580,31 +607,32 @@ nfc.NDEFAgent.prototype.addAgent = function(successCB, errorCB) {
 		}
 	}
 	
-	function NDEFAgentAddSuccessCB() {
-		// Registering service for Neard
-		nfc.manager.RegisterNDEFAgent(self.objectPath, self.tagType, registerNDEFAgentSuccessCB, errorCB);
+	function DBusAgentAddedSuccessCB() {
+		// Registered agent with Neard
+		nfc.manager.RegisterNDEFAgent(self.objectPath, self.tagType, NeardNDEFAgentRegisteredSuccessCB, errorCB);
 	}
 	
-	this.service.addAgent(this.objectPath, this.xmlTemplate, NDEFAgentAddSuccessCB, errorCB);
+	nfc.bus.service.addAgent(this.objectPath, this.xmlTemplate, DBusAgentAddedSuccessCB, errorCB);
 };
 
 nfc.NDEFAgent.prototype.registerMethod = function(methodName, methodHandler) {
 	methodId = this.srvName + "#" + this.objectPath + "#" + methodName;
 	
-	this.service.registerMethod(methodId, methodHandler);
+	nfc.bus.service.registerMethod(methodId, methodHandler);
 };
 
 nfc.NDEFAgent.prototype.returnMethod = function(methodId, success, result, successCB, errorCB) {
-	this.service.returnMethod(methodId, success, result, successCB, errorCB);
+	nfc.bus.service.returnMethod(methodId, success, result, successCB, errorCB);
 };
 
 nfc.NDEFAgent.prototype.remove = function(successCB, errorCB) {
 	var self = this;
 	
-	function delAgentSuccessCB(agent) {
+	function NeardNDEFAgentUnregisteredSuccessCB() {
+		self.neardRegistered = false;
 		if (successCB) {
 			try { // calling dbus hook object function for un-translated types
-				successCB(agent);
+				successCB(self.objectPath);
 			}
 			catch (e) {
 				alert(arguments.callee.name + "-> Method callback exception: " + e);
@@ -612,16 +640,15 @@ nfc.NDEFAgent.prototype.remove = function(successCB, errorCB) {
 		}
 	}
 
-	this.service.delAgent(this.objectPath, delAgentSuccessCB, errorCB);
+	function DBusAgentRemovedSuccessCB(agent) {
+		// Unregistering service from Neard
+		nfc.manager.UnregisterNDEFAgent(self.objectPath, self.tagType, NeardNDEFAgentUnregisteredSuccessCB, errorCB);
+	}
+	
+	nfc.bus.service.delAgent(this.objectPath, DBusAgentRemovedSuccessCB, errorCB);
 };
 
 NDEFAgent.prototype = new nfc.NDEFAgent();
 NDEFAgent.prototype.constructor = NDEFAgent;
 
 /*****************************************************************************/
-	
-
-
-
-
-
