@@ -154,6 +154,7 @@ nfc.NFCAdapter = function(proxy) {
 		this.powered = proxy.props.Powered ? true : false;
 		this.polling = proxy.props.Polling ? true : false;
 	}
+	this.tagListener = this.peerListener = null;
 	return this;
 };
 
@@ -189,20 +190,24 @@ nfc.NFCAdapter.prototype.setPolling = function(state, successCB, errorCB) {
 };
 
 
-nfc.NFCAdapter.prototype.setTagListener = function(detectCB, errorCB, tagFilter) {
+nfc.NFCAdapter.prototype.setListener = function(listenerKey, errorCB) {
 	
 	var self = this;
 	
 	var tag = null;
-	
-	if (self.connected)
-		self.unsetTagListener();
+	var peer = null;
 	
 	function onTagPropsOk(props) {
 		tag.props = props;
 		tag.type = props.Type;
-		if (detectCB)
-			detectCB.onattach(tag);
+		if (self.tagListener)
+			self.tagListener.onattach(tag);
+	}
+	
+	function onPeerPropsOk(props) {
+		peer.props = props;
+		if (self.peerListener)
+			self.peerListener.onattach(peer);
 	}
 	
 	function onTagFound(tagId) {
@@ -213,27 +218,153 @@ nfc.NFCAdapter.prototype.setTagListener = function(detectCB, errorCB, tagFilter)
 				[], onTagPropsOk, errorCB);
 	}
 	
+	function onPeerFound(deviceId) {
+		if (peer) /* trigger "found" callback only once */
+			return;
+		peer = new nfc.NFCPeer(nfc.bus.getObject(nfc.busName, deviceId));
+		peer.proxy.callMethod("org.neard.Device", "GetProperties", 
+				[], onPeerPropsOk, errorCB);
+	}
+	
 	function onPropertyChanged(key, table) {
 		if (key == "Tags") {
 			if (table.length == 0) {
 				tag = null;
-				detectCB.ondetach();
+				if (self.tagListener)
+					self.tagListener.ondetach();
 				self.setPolling(true);
 			}
 			else
 				onTagFound(table[0]);
 		}
+		if (key == "Devices") {
+			if (table.length == 0) {
+				peer = null;
+				if (self.peerListener)
+					self.peerListener.ondetach();
+				self.setPolling(true);
+			}
+			else
+				onPeerFound(table[0]);
+		}
 	}
 	
-	self.proxy.connectToSignal("org.neard.Adapter","PropertyChanged",
-			onPropertyChanged);
-	self.connected = true;
+	if (!self.connected) {
+		self.proxy.connectToSignal("org.neard.Adapter","PropertyChanged",
+				onPropertyChanged);
+		self.connected = true;
+	}
+};
+
+
+nfc.NFCAdapter.prototype.setTagListener = function(detectCB, errorCB, tagFilter) {
+	this.tagListener = detectCB;
+	return this.setListener("Tags", errorCB);
+};
+
+
+nfc.NFCAdapter.prototype.setPeerListener = function(detectCB, errorCB) {
+	this.peerListener = detectCB;
+	return this.setListener("Devices", errorCB);
+};
+
+
+nfc.NFCAdapter.prototype.unsetListener = function() {
+	if (this.tagListener || this.peerListener)
+		return;
+	this.proxy.disconnectSignal("org.neard.Adapter","PropertyChanged");
+	this.connected = false;
 };
 
 
 nfc.NFCAdapter.prototype.unsetTagListener = function() {
-	this.proxy.disconnectSignal("org.neard.Adapter","PropertyChanged");
-	this.connected = false;
+	this.tagListener = null;
+	return this.unsetListener();
+};
+
+
+nfc.NFCAdapter.prototype.unsetPeerListener = function() {
+	this.peerListener = null;
+	return this.unsetListener();
+};
+
+
+
+/*****************************************************************************/
+
+nfc.NFCPeer = function(proxy) {
+	this.proxy = proxy;
+	if (proxy) {
+		this.id = proxy.objectPath;
+	}
+	this.isConnected = false;
+	return this;
+};
+
+
+nfc.NFCPeer.prototype.setReceiveNDEFListener = function(receiveCB, errorCB) {
+	
+	var self = this;
+	
+	if (!self.props)
+		return errorCB("Peer properties unknown.");
+	
+	var records = [];
+	
+	function onRecPropsOk(props) {
+		records.push(nfc.NDEFRecordForProps(props));
+		if (records.length == self.props.Records.length && receiveCB)
+			receiveCB(new NDEFMessage(records));
+	}
+	
+	function NDEFMessageForRecords() {
+		records = [];
+		for (var i=0; i<self.props.Records.length; i++) {
+			var recProxy = nfc.bus.getObject(nfc.busName, self.props.Records[i]);
+			recProxy.callMethod("org.neard.Record", "GetProperties", 
+					[], onRecPropsOk, errorCB);
+		}
+	}
+	
+	function onPropertyChanged(key, table) {
+		if (key == "Records") {
+			self.props.Records = table;
+			NDEFMessageForRecords();
+		}
+	}
+
+	if (!self.isConnected) {
+		self.proxy.connectToSignal("org.neard.Device","PropertyChanged",
+				onPropertyChanged);
+		self.isConnected = true;
+		NDEFMessageForRecords();
+	}
+};
+
+
+nfc.NFCPeer.prototype.unsetReceiveNDEFListener = function() {
+	this.proxy.disconnectSignal("org.neard.Device","PropertyChanged");
+	this.isConnected = false;
+};
+
+
+nfc.NFCPeer.prototype.sendNDEF = function(ndefMessage, successCB, errorCB) {
+	for (var i=0; i< ndefMessage.records.length; i++) {
+		var ndefRecord = ndefMessage.records[i];
+		var rec = ndefRecord.neardRecord();
+		this.proxy.callMethod("org.neard.Device", "Push", 
+			[rec], successCB, errorCB);
+	}
+};
+
+
+nfc.NFCPeer.prototype.startHandover = function(type, successCB, errorCB) {
+	this.proxy.callMethod("org.neard.Device", "Push", 
+		[{
+			 Type: "Handover",
+			 Carrier: type
+		}], 
+		successCB, errorCB);
 };
 
 
