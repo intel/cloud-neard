@@ -6,6 +6,7 @@
 
 	// NFC agent to manage NDEF raw data
 	var ndefAgent;
+	var ndefAgentTagType;
 	
 	// HTML page management
 	function initPage(error) {
@@ -143,37 +144,54 @@
 
     // NDEF Agent Management
     function ndefLog_func(func_name, log_str) {
-    	ndefLog.innerHTML += "<br><b>" + func_name + "</b> : " + log_str;
+    	ndefLog.innerHTML += "<br>" + func_name + " : " + log_str;
    }
     
-    function NdefAgentRegisterSuccessCB(NDEFAgent) {
-    	ndefLog.innerHTML += "<br><b>main: NdefAgentRegisterSuccessCB</b><br>";
+    function NdefAgentRegisteredSuccessCB(NDEFAgent) {
+    	ndefLog.innerHTML += "<br>main: " + arguments.callee.name + "<br>";
     	ndefAgent = NDEFAgent;
     }
     
-    function NdefAgentRegisterErrorCB(error) {
-    	ndefLog.innerHTML += "<br>main: NdefAgentRegisterErrorCB: <b>" + error.desc + "</b>";
+    function NdefAgentRegisteredErrorCB(error) {
+    	if (error.desc == undefined) {
+        	ndefLog.innerHTML += "<br>main: " + arguments.callee.name + "<b> >> " + error + "</b><br>";
+    	} else {
+        	ndefLog.innerHTML += "<br>main: " + arguments.callee.name + "<b> >> " + error.desc + "</b><br>";
+    	}
+    }
+    
+    function ServiceAddedSuccessCB(service) {
+    	ndefLog.innerHTML += "<br>main: " + arguments.callee.name + "<br>";
+    	nfc.registerNdefAgent(ndefAgentTagType, ndefLog_func, NdefAgentRegisteredSuccessCB, NdefAgentRegisteredErrorCB);
+    }
+    
+    function ServiceAddedErrorCB(error) {
+    	if (error.desc == undefined) {
+        	ndefLog.innerHTML += "<br>main: " + arguments.callee.name + "<b> >> " + error + "</b><br>";
+    	} else {
+        	ndefLog.innerHTML += "<br>main: " + arguments.callee.name + "<b> >> " + error.desc + "</b><br>";
+    	}
     }
     
     function registerNDEFAgent(tagType) {
     	nfc.registerNdefAgent(tagType, ndefLog_func, NdefAgentRegisterSuccessCB, NdefAgentRegisterErrorCB);
     }
     
-    function NdefAgentReleaseSuccessCB(NDEFAgent) {
-    	ndefLog.innerHTML += "<br><b>main: NdefAgentReleaseSuccessCB</b><br>";
+    function NdefAgentUnregisterSuccessCB(NDEFAgent) {
+    	ndefLog.innerHTML += "<br>main: " + arguments.callee.name + "<br>";
     	ndefAgent = null;
     }
     
-    function NdefAgentReleaseErrorCB(error) {
-    	ndefLog.innerHTML += "<br>main: NdefAgentReleaseErrorCB: <b>" + error.desc + "</b>";
+    function NdefAgentUnregisterErrorCB(error) {
+    	ndefLog.innerHTML += "<br>main: " + arguments.callee.name + "<b> >> " + error + "</b><br>";
     }
     
     function unregisterNDEFAgent(tagType) {
-    	nfc.unregisterNdefAgent(tagType, NdefAgentReleaseSuccessCB, NdefAgentReleaseErrorCB);
+    	nfc.unregisterNdefAgent(tagType, NdefAgentUnregisterSuccessCB, NdefAgentUnregisterErrorCB);
     }
     
     function serviceReleaseSuccessCB(service) {
-    	ndefLog.innerHTML += "<br><b>main: serviceReleaseSuccessCB</b><br>";
+    	ndefLog.innerHTML += "<br>main: serviceReleaseSuccessCB<br>";
     }
     
     function serviceReleaseErrorCB(error) {
