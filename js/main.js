@@ -6,7 +6,6 @@
 
 	// NFC agent to manage NDEF raw data
 	var ndefAgent;
-	var ndefAgentTagType;
 	
 	// HTML page management
 	function initPage(error) {
@@ -160,21 +159,8 @@
     	}
     }
     
-    function ServiceAddedSuccessCB(service) {
-    	ndefLog.innerHTML += "<br>main: " + arguments.callee.name + "<br>";
-    	nfc.registerNdefAgent(ndefAgentTagType, ndefLog_func, NdefAgentRegisteredSuccessCB, NdefAgentRegisteredErrorCB);
-    }
-    
-    function ServiceAddedErrorCB(error) {
-    	if (error.desc == undefined) {
-        	ndefLog.innerHTML += "<br>main: " + arguments.callee.name + "<b> >> " + error + "</b><br>";
-    	} else {
-        	ndefLog.innerHTML += "<br>main: " + arguments.callee.name + "<b> >> " + error.desc + "</b><br>";
-    	}
-    }
-    
     function registerNDEFAgent(tagType) {
-    	nfc.registerNdefAgent(tagType, ndefLog_func, NdefAgentRegisterSuccessCB, NdefAgentRegisterErrorCB);
+    	nfc.registerNdefAgent(tagType, ndefLog_func, NdefAgentRegisteredSuccessCB, NdefAgentRegisteredErrorCB);
     }
     
     function NdefAgentUnregisterSuccessCB(NDEFAgent) {
