@@ -145,7 +145,7 @@ nfc.NFCAdapter.prototype.setListener = function(listenerKey, errorCB) {
 			return;
 		tag = new nfc.NFCTag(nfc.bus.getObject(nfc.busName, tagId));
 		tag.proxy.callMethod("org.neard.Tag", "GetProperties", 
-				[], onTagPropsOk, errorCB);
+				[]).then(onTagPropsOk, errorCB);
 	}
 	
 	function onPeerFound(deviceId) {
@@ -153,7 +153,7 @@ nfc.NFCAdapter.prototype.setListener = function(listenerKey, errorCB) {
 			return;
 		peer = new nfc.NFCPeer(nfc.bus.getObject(nfc.busName, deviceId));
 		peer.proxy.callMethod("org.neard.Device", "GetProperties", 
-				[], onPeerPropsOk, errorCB);
+				[]).then(onPeerPropsOk, errorCB);
 	}
 	
 	function onPropertyChanged(key, table) {
@@ -252,7 +252,7 @@ nfc.NFCPeer.prototype.setReceiveNDEFListener = function(receiveCB, errorCB) {
 		for (var i=0; i<self.props.Records.length; i++) {
 			var recProxy = nfc.bus.getObject(nfc.busName, self.props.Records[i]);
 			recProxy.callMethod("org.neard.Record", "GetProperties", 
-					[], onRecPropsOk, errorCB);
+					[]).then(onRecPropsOk, errorCB);
 		}
 	}
 	
@@ -283,7 +283,7 @@ nfc.NFCPeer.prototype.sendNDEF = function(ndefMessage, successCB, errorCB) {
 		var ndefRecord = ndefMessage.records[i];
 		var rec = ndefRecord.neardRecord();
 		this.proxy.callMethod("org.neard.Device", "Push", 
-			[rec], successCB, errorCB);
+			[rec]).then(successCB, errorCB);
 	}
 };
 
@@ -293,7 +293,7 @@ nfc.NFCPeer.prototype.startHandover = function(type, successCB, errorCB) {
 		[{
 			 Type: "Handover",
 			 Carrier: type
-		}], 
+		}]).then( 
 		successCB, errorCB);
 };
 
@@ -329,7 +329,7 @@ nfc.NFCTag.prototype.readNDEF = function(readCB, errorCB) {
 	for (var i=0; i<self.props.Records.length; i++) {
 		var recProxy = nfc.bus.getObject(nfc.busName, self.props.Records[i]);
 		recProxy.callMethod("org.neard.Record", "GetProperties", 
-				[], onRecPropsOk, errorCB);
+				[]).then(onRecPropsOk, errorCB);
 	}
 };
 
@@ -338,7 +338,7 @@ nfc.NFCTag.prototype.writeNDEF = function(ndefMessage, successCB, errorCB) {
 	var ndefRecord = ndefMessage.records[0];
 	var rec = ndefRecord.neardRecord();
 	this.proxy.callMethod("org.neard.Tag", "Write", 
-			[rec], successCB, errorCB);
+			[rec]).then(successCB, errorCB);
 };
 
 
