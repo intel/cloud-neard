@@ -41,7 +41,7 @@ nfc.init = function(uri, manifest, successCB, errorCB) {
 	}
 	
 	function onAdapterOk() {
-		nfc.adapter.GetProperties(onAdapterPropsOk, errorCB);
+		nfc.adapter.GetProperties().then(onAdapterPropsOk, errorCB);
 	}
 	
 	function onManagerPropsOk(props) {
@@ -56,7 +56,7 @@ nfc.init = function(uri, manifest, successCB, errorCB) {
 	}
 	
 	function onManagerOk() {
-		nfc.manager.GetProperties(onManagerPropsOk, errorCB);
+		nfc.manager.GetProperties().then(onManagerPropsOk, errorCB);
 	}
 	
 	function onConnectOk() {
@@ -99,7 +99,7 @@ nfc.NFCAdapter.prototype.setPowered = function(state, successCB, errorCB) {
 			successCB();
 	}
 
-	self.proxy.SetProperty("Powered", state, onPoweredOk, errorCB);
+	self.proxy.SetProperty("Powered", state).then(onPoweredOk, errorCB);
 };
 
 
@@ -114,9 +114,9 @@ nfc.NFCAdapter.prototype.setPolling = function(state, successCB, errorCB) {
 	}
 
 	if (state)
-		self.proxy.StartPollLoop("Initiator", onPollingOk, errorCB);
+		self.proxy.StartPollLoop("Initiator").then(onPollingOk, errorCB);
 	else
-		self.proxy.StopPollLoop(onPollingOk, errorCB);
+		self.proxy.StopPollLoop().then(onPollingOk, errorCB);
 };
 
 
