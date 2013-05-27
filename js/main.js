@@ -1,18 +1,41 @@
 	// HTML DOM elements
 	var outLog, writeLog, recordContentText;
-	
-	// NFC global objects
-	var adapter;
-	
+		
 	// HTML page management
 	function initPage() {
 		// init HTML DOM elements
 		outLog = document.getElementById("outLog");
 		writeLog = document.getElementById("writeLog");
 		recordContentText = document.getElementById("recordContentText");
-		// init NFC global objects
-		adapter = nfc.getDefaultAdapter();
-		adapter.setPowered(true);
+		// logging
+		cloudeebus.log = function(str) {
+			outLog.innerHTML += "<hr>[LOG]" + str + "<hr>";
+		}
+		// NFCManager event handlers
+		nfc.onpollstart = function(event) {
+			cloudeebus.log(JSON.stringify(event));
+			document.tagManagement.tagListener.selectedIndex=1;
+		};
+		nfc.onpollstop = function(event) {
+			cloudeebus.log(JSON.stringify(event));
+			document.tagManagement.tagListener.selectedIndex=0;
+		};
+		nfc.ontagfound = function(event) {
+			cloudeebus.log(JSON.stringify(event));
+			readOnAttach(event.param);
+		};
+		nfc.ontaglost = function(event) {
+			cloudeebus.log(JSON.stringify(event));
+			outLog.innerHTML += "<br><b>Tag, detached</b><hr>";
+		};
+		nfc.onpeerfound = function(event) {
+			cloudeebus.log(JSON.stringify(event));
+			peerOnAttach(event.param);
+		};
+		nfc.onpeerlost = function(event) {
+			cloudeebus.log(JSON.stringify(event));
+			outLog.innerHTML += "<br><b>Peer detached</b><hr>";
+		};
 		// initial state with tag reading disabled
 		readNFCTag(false);
 	}
@@ -57,16 +80,15 @@
 
     // Manage NFC Tag reading
 	function readNFCTag(enabled) {
-		adapter.setPolling(enabled);
 		if (enabled) {
-			adapter.setTagListener({onattach: readOnAttach, ondetach: function(){outLog.innerHTML += "<br><b>Tag was read, detached</b><br>";}});
-			adapter.setPeerListener({onattach: peerOnAttach, ondetach: function(){outLog.innerHTML += "<br><b>Peer detached</b><br>";}});
-			document.tagManagement.tagListener.selectedIndex=1;
+			nfc.startPoll().then(function() {
+				document.tagManagement.tagListener.selectedIndex=1;
+			});
 		}
 		else {
-			adapter.unsetTagListener();
-			adapter.unsetPeerListener();
-			document.tagManagement.tagListener.selectedIndex=0;
+			nfc.stopPoll().then(function() {
+				document.tagManagement.tagListener.selectedIndex=0;
+			});
 		}
 	}
 
@@ -174,10 +196,7 @@
 			}
 		}
 		var cloudeebusURI = "ws://" + cloudeebusHost + ":" + cloudeebusPort;
-		nfc.init(cloudeebusURI, 
-				manifest,
-				initPage,
-				debugLog);
+		nfc._init(cloudeebusURI, manifest).then(initPage, debugLog);
 	};
 	// window.onload can work without <body onload="">
 	window.onload = init;

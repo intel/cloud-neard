@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright 2012 Intel Corporation.
+ * Copyright 2013 Intel Corporation.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,109 +20,17 @@
 
 var nfc = window.nfc = {};
 
-nfc.reset = function() {
-	nfc.busName = "org.neard";
-	nfc.bus = null;
-	nfc.uri = null;
-	nfc.manager = null;
-	nfc.adapter = null;
-	nfc.defaultAdapter = null;
+nfc._reset = function() {
+	nfc._busName = "org.neard";
+	nfc._bus = null;
+	nfc._uri = null;
+	nfc._manager = null;
+	nfc._adapter = null;
+	nfc.polling = false;
 };
 
 
-nfc.init = function(uri, manifest, successCB, errorCB) {
-	nfc.reset();
-	
-	function onAdapterPropsOk(props) {
-		nfc.adapter.props = props;
-		nfc.defaultAdapter = new nfc.NFCAdapter(nfc.adapter);
-		if (successCB)
-			successCB();		
-	}
-	
-	function onAdapterOk() {
-		nfc.adapter.GetProperties().then(onAdapterPropsOk, errorCB);
-	}
-	
-	function onManagerPropsOk(props) {
-		if (props.Adapters.length == 0)
-			errorCB("No NFC Adapter found");
-		else {
-			nfc.adapter = nfc.bus.getObject(nfc.busName, 
-					props.Adapters[0], 
-					onAdapterOk, 
-					errorCB);
-		}
-	}
-	
-	function onManagerOk() {
-		nfc.manager.GetProperties().then(onManagerPropsOk, errorCB);
-	}
-	
-	function onConnectOk() {
-		nfc.bus = cloudeebus.SystemBus();
-		nfc.uri = uri;
-		nfc.manager = nfc.bus.getObject(nfc.busName, "/", onManagerOk, errorCB);
-	}
-	
-	cloudeebus.connect(uri, manifest, onConnectOk, errorCB);
-};
-
-
-nfc.getDefaultAdapter = function() {
-	return nfc.defaultAdapter;
-};
-
-
-
-/*****************************************************************************/
-
-nfc.NFCAdapter = function(proxy) {
-	this.proxy = proxy;
-	if (proxy) {
-		this.id = proxy.objectPath;
-		this.powered = proxy.props.Powered ? true : false;
-		this.polling = proxy.props.Polling ? true : false;
-	}
-	this.tagListener = this.peerListener = null;
-	return this;
-};
-
-
-nfc.NFCAdapter.prototype.setPowered = function(state, successCB, errorCB) {
-
-	var self = this;
-
-	function onPoweredOk() {
-		self.powered = state;
-		if (successCB)
-			successCB();
-	}
-
-	self.proxy.SetProperty("Powered", state).then(onPoweredOk, errorCB);
-};
-
-
-nfc.NFCAdapter.prototype.setPolling = function(state, successCB, errorCB) {
-
-	var self = this;
-
-	function onPollingOk() {
-		self.polling = state;
-		if (successCB)
-			successCB();
-	}
-
-	if (state)
-		self.proxy.StartPollLoop("Initiator").then(onPollingOk, errorCB);
-	else
-		self.proxy.StopPollLoop().then(onPollingOk, errorCB);
-};
-
-
-nfc.NFCAdapter.prototype.setListener = function(listenerKey, errorCB) {
-	
-	var self = this;
+nfc._adapterChanged = function(key, value) {
 	
 	var tag = null;
 	var peer = null;
@@ -130,92 +38,141 @@ nfc.NFCAdapter.prototype.setListener = function(listenerKey, errorCB) {
 	function onTagPropsOk(props) {
 		tag.props = props;
 		tag.type = props.Type;
-		if (self.tagListener)
-			self.tagListener.onattach(tag);
+		if (nfc.ontagfound)
+			nfc.ontagfound({type: "tagfound", param: tag});
 	}
 	
 	function onPeerPropsOk(props) {
 		peer.props = props;
-		if (self.peerListener)
-			self.peerListener.onattach(peer);
+		if (nfc.onpeerfound)
+			nfc.onpeerfound({type: "peerfound", param: peer});
 	}
 	
 	function onTagFound(tagId) {
 		if (tag) /* trigger "found" callback only once */
 			return;
-		tag = new nfc.NFCTag(nfc.bus.getObject(nfc.busName, tagId));
+		tag = new nfc.NFCTag(nfc._bus.getObject(nfc._busName, tagId));
 		tag.proxy.callMethod("org.neard.Tag", "GetProperties", 
-				[]).then(onTagPropsOk, errorCB);
+				[]).then(onTagPropsOk);
 	}
 	
 	function onPeerFound(deviceId) {
 		if (peer) /* trigger "found" callback only once */
 			return;
-		peer = new nfc.NFCPeer(nfc.bus.getObject(nfc.busName, deviceId));
+		peer = new nfc.NFCPeer(nfc._bus.getObject(nfc._busName, deviceId));
 		peer.proxy.callMethod("org.neard.Device", "GetProperties", 
-				[]).then(onPeerPropsOk, errorCB);
+				[]).then(onPeerPropsOk);
 	}
 	
-	function onPropertyChanged(key, table) {
-		if (key == "Tags") {
-			if (table.length == 0) {
-				tag = null;
-				if (self.tagListener)
-					self.tagListener.ondetach();
-				self.setPolling(true);
-			}
-			else
-				onTagFound(table[0]);
+	if (key == "Tags") {
+		if (value.length == 0) {
+			tag = null;
+			if (nfc.ontaglost)
+				nfc.ontaglost({type: "taglost"});
+			nfc.startPoll();
 		}
-		if (key == "Devices") {
-			if (table.length == 0) {
-				peer = null;
-				if (self.peerListener)
-					self.peerListener.ondetach();
-				self.setPolling(true);
-			}
-			else
-				onPeerFound(table[0]);
+		else
+			onTagFound(value[0]);
+	}
+	if (key == "Devices") {
+		if (value.length == 0) {
+			peer = null;
+			if (nfc.onpeerlost)
+				nfc.onpeerlost({type: "peerlost"});
+			nfc.startPoll();
+		}
+		else
+			onPeerFound(value[0]);
+	}
+	if (key == "Polling") {
+		nfc.polling = value;
+		if (value) {
+			if (nfc.onpollstart)
+				nfc.onpollstart({type: "pollstart"});
+		}
+		else {
+			if (nfc.onpollstop)
+				nfc.onpollstop({type: "pollstop"});
 		}
 	}
 	
-	if (!self.connected) {
-		self.proxy.connectToSignal("org.neard.Adapter","PropertyChanged",
-				onPropertyChanged);
-		self.connected = true;
+};
+
+
+nfc._init = function(uri, manifest) {
+	nfc._reset();
+	
+	var future = new cloudeebus.Future(function (resolver) {
+		function onAdapterPropsOk(props) {
+			nfc._adapter.props = props;
+			nfc.polling = props.Polling ? true : false;
+			resolver.accept();
+		}
+		
+		function onAdapterOk() {
+			nfc._adapter.GetProperties().then(onAdapterPropsOk, onerror);
+		}
+		
+		function onManagerPropsOk(props) {
+			if (props.Adapters.length == 0)
+				resolver.reject("No NFC Adapter found", true);	
+			else {
+				nfc._adapter = nfc._bus.getObject(nfc._busName, 
+						props.Adapters[0], 
+						onAdapterOk, 
+						onerror);
+				nfc._adapter.connectToSignal("org.neard.Adapter","PropertyChanged",
+						nfc._adapterChanged);
+			}
+		}
+		
+		function onManagerOk() {
+			nfc._manager.GetProperties().then(onManagerPropsOk, onerror);
+		}
+		
+		function onConnectOk() {
+			nfc._bus = cloudeebus.SystemBus();
+			nfc._uri = uri;
+			nfc._manager = nfc._bus.getObject(nfc._busName, "/", onManagerOk, onerror);
+		}
+		
+		function onerror(error) {
+			cloudeebus.log("NFC init error: " + error.desc);
+			resolver.reject(error.desc, true);			
+		}
+		
+		cloudeebus.connect(uri, manifest, onConnectOk, onerror);
+	});
+	
+	return future;
+};
+
+
+nfc.startPoll = function() {
+	function onsuccess() {
+		cloudeebus.log("startPoll onsuccess Future state: " + this.state + ", result: " + this.result);
+		nfc.polling = true;
 	}
+	
+	function onerror() {
+		cloudeebus.log("startPoll onerror Future state: " + this.state + ", result: " + this.result);
+	}
+	
+	return nfc._adapter.StartPollLoop("Initiator").then(onsuccess, onerror);
 };
 
 
-nfc.NFCAdapter.prototype.setTagListener = function(detectCB, errorCB, tagFilter) {
-	this.tagListener = detectCB;
-	return this.setListener("Tags", errorCB);
-};
-
-
-nfc.NFCAdapter.prototype.setPeerListener = function(detectCB, errorCB) {
-	this.peerListener = detectCB;
-	return this.setListener("Devices", errorCB);
-};
-
-
-nfc.NFCAdapter.prototype.unsetListener = function() {
-	if (this.tagListener || this.peerListener)
-		return;
-	this.proxy.disconnectSignal("org.neard.Adapter","PropertyChanged");
-	this.connected = false;
-};
-
-
-nfc.NFCAdapter.prototype.unsetTagListener = function() {
-	this.tagListener = null;
-	return this.unsetListener();
-};
-
-
-nfc.NFCAdapter.prototype.unsetPeerListener = function() {
-	this.peerListener = null;
-	return this.unsetListener();
+nfc.stopPoll = function() {
+	function onsuccess() {
+		cloudeebus.log("stopPoll onsuccess Future state: " + this.state + ", result: " + this.result);
+		nfc.polling = false;
+	}
+	
+	function onerror() {
+		cloudeebus.log("stopPoll onerror Future state: " + this.state + ", result: " + this.result);
+	}
+	
+	return nfc._adapter.StopPollLoop("Initiator").then(onsuccess, onerror);
 };
 
 
@@ -250,7 +207,7 @@ nfc.NFCPeer.prototype.setReceiveNDEFListener = function(receiveCB, errorCB) {
 	function NDEFMessageForRecords() {
 		records = [];
 		for (var i=0; i<self.props.Records.length; i++) {
-			var recProxy = nfc.bus.getObject(nfc.busName, self.props.Records[i]);
+			var recProxy = nfc._bus.getObject(nfc._busName, self.props.Records[i]);
 			recProxy.callMethod("org.neard.Record", "GetProperties", 
 					[]).then(onRecPropsOk, errorCB);
 		}
@@ -327,7 +284,7 @@ nfc.NFCTag.prototype.readNDEF = function(readCB, errorCB) {
 	}
 	
 	for (var i=0; i<self.props.Records.length; i++) {
-		var recProxy = nfc.bus.getObject(nfc.busName, self.props.Records[i]);
+		var recProxy = nfc._bus.getObject(nfc._busName, self.props.Records[i]);
 		recProxy.callMethod("org.neard.Record", "GetProperties", 
 				[]).then(onRecPropsOk, errorCB);
 	}
