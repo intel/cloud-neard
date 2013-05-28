@@ -53,7 +53,9 @@
     // NFC Peer read callback
     function peerOnAttach(peer) {
 		outLog.innerHTML += "<br><b>Peer detected</b><br>";
-		peer.setReceiveNDEFListener(logMessage);
+		peer.onmessageread = function(event) {
+			logMessage(event.param);
+		};
 	}
 
     // Manage NFC Tag / peer listening
@@ -115,7 +117,7 @@
 	function peerWriteOnAttach(nfcPeer) {
 		if (!messageToWrite)
 			alert("No message to send");
-		nfcPeer.sendNDEF(messageToWrite, writeSuccess, writeError);
+		nfcPeer.sendNDEF(messageToWrite).then(writeSuccess, writeError);
 	}    
 
 	function writeOnDetach() {

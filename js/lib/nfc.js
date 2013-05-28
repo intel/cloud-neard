@@ -32,6 +32,57 @@ nfc._reset = function() {
 };
 
 
+
+/*****************************************************************************/
+
+nfc._NDEFRecordForProps = function(props) {
+	if (props.Type == "Text")
+		return new nfc.NDEFRecordText(props);
+	if (props.Type == "URI")
+		return new nfc.NDEFRecordURI(props);
+	return new nfc.NDEFRecord(props);
+};
+
+
+nfc._NDEFMessageForRecordIds = function(ids) {
+	
+	var future = new cloudeebus.Future(function (resolver) {
+		
+		var records = [];
+		
+		function onRecPropsOk(props) {
+			records.push(nfc._NDEFRecordForProps(props));
+			if (records.length == ids.length)
+				resolver.resolve(new NDEFMessage(records), true);
+		}
+		
+		for (var i=0; i<ids.length; i++) {
+			var recProxy = nfc._bus.getObject(nfc._busName, ids[i]);
+			recProxy.callMethod("org.neard.Record", "GetProperties", 
+					[]).then(onRecPropsOk, function(err) {resolver.reject(err,true)});
+		}
+	});
+	
+	return future;
+}
+
+
+
+/*****************************************************************************/
+
+nfc._peerChanged = function(key, value) {
+	
+	if (key == "Records") {
+		nfc._peer.props.Records = value;
+		if (nfc._peer.onmessageread)
+			nfc._NDEFMessageForRecordIds(nfc._peer.props.Records).then(
+					function(msg) {
+						nfc._peer.onmessageread({type: "messageread", param: msg});
+					});
+	}
+};
+
+
 nfc._adapterChanged = function(key, value) {
 	
 	function onTagPropsOk(props) {
@@ -61,7 +112,9 @@ nfc._adapterChanged = function(key, value) {
 		nfc._peer = new nfc.NFCPeer(nfc._bus.getObject(nfc._busName, deviceId));
 		nfc._peer.proxy.callMethod("org.neard.Device", "GetProperties", 
 				[]).then(onPeerPropsOk);
-	}
+		nfc._peer.proxy.connectToSignal("org.neard.Device","PropertyChanged",
+				nfc._peerChanged);
+		}
 	
 	if (key == "Tags") {
 		if (value.length == 0) {
@@ -97,6 +150,9 @@ nfc._adapterChanged = function(key, value) {
 	
 };
 
+
+
+/*****************************************************************************/
 
 nfc._init = function(uri, manifest) {
 	nfc._reset();
@@ -147,6 +203,9 @@ nfc._init = function(uri, manifest) {
 };
 
 
+
+/*****************************************************************************/
+
 nfc.startPoll = function() {
 	return nfc._adapter.StartPollLoop("Initiator").then(function(){nfc.polling=true;});
 };
@@ -170,69 +229,23 @@ nfc.NFCPeer = function(proxy) {
 };
 
 
-nfc.NFCPeer.prototype.setReceiveNDEFListener = function(receiveCB, errorCB) {
-	
-	var self = this;
-	
-	if (!self.props)
-		return errorCB("Peer properties unknown.");
-	
-	var records = [];
-	
-	function onRecPropsOk(props) {
-		records.push(nfc.NDEFRecordForProps(props));
-		if (records.length == self.props.Records.length && receiveCB)
-			receiveCB(new NDEFMessage(records));
-	}
-	
-	function NDEFMessageForRecords() {
-		records = [];
-		for (var i=0; i<self.props.Records.length; i++) {
-			var recProxy = nfc._bus.getObject(nfc._busName, self.props.Records[i]);
-			recProxy.callMethod("org.neard.Record", "GetProperties", 
-					[]).then(onRecPropsOk, errorCB);
-		}
-	}
-	
-	function onPropertyChanged(key, table) {
-		if (key == "Records") {
-			self.props.Records = table;
-			NDEFMessageForRecords();
-		}
-	}
-
-	if (!self.isConnected) {
-		self.proxy.connectToSignal("org.neard.Device","PropertyChanged",
-				onPropertyChanged);
-		self.isConnected = true;
-		NDEFMessageForRecords();
-	}
-};
-
-
-nfc.NFCPeer.prototype.unsetReceiveNDEFListener = function() {
-	this.proxy.disconnectSignal("org.neard.Device","PropertyChanged");
-	this.isConnected = false;
-};
-
-
-nfc.NFCPeer.prototype.sendNDEF = function(ndefMessage, successCB, errorCB) {
+nfc.NFCPeer.prototype.sendNDEF = function(ndefMessage) {
+	var futures = [];
 	for (var i=0; i< ndefMessage.records.length; i++) {
 		var ndefRecord = ndefMessage.records[i];
 		var rec = ndefRecord.neardRecord();
-		this.proxy.callMethod("org.neard.Device", "Push", 
-			[rec]).then(successCB, errorCB);
+		futures.push(this.proxy.callMethod("org.neard.Device", "Push", [rec]));
 	}
+	return cloudeebus.Future.every.apply(cloudeebus.Future,futures);
 };
 
 
-nfc.NFCPeer.prototype.startHandover = function(type, successCB, errorCB) {
-	this.proxy.callMethod("org.neard.Device", "Push", 
+nfc.NFCPeer.prototype.startHandover = function(type) {
+	return this.proxy.callMethod("org.neard.Device", "Push", 
 		[{
 			 Type: "Handover",
 			 Carrier: type
-		}]).then( 
-		successCB, errorCB);
+		}]);
 };
 
 
@@ -250,30 +263,10 @@ nfc.NFCTag = function(proxy) {
 
 
 nfc.NFCTag.prototype.readNDEF = function() {
+	if (!this.props)
+		return cloudeebus.Future.reject("Tag properties unknown.");
 	
-	var self = this;
-	
-	var future = new cloudeebus.Future(function (resolver) {
-	
-		if (!self.props)
-			resolver.reject("Tag properties unknown.", true);
-		
-		var records = [];
-		
-		function onRecPropsOk(props) {
-			records.push(nfc.NDEFRecordForProps(props));
-			if (records.length == self.props.Records.length)
-				resolver.resolve(new NDEFMessage(records), true);
-		}
-		
-		for (var i=0; i<self.props.Records.length; i++) {
-			var recProxy = nfc._bus.getObject(nfc._busName, self.props.Records[i]);
-			recProxy.callMethod("org.neard.Record", "GetProperties", 
-					[]).then(onRecPropsOk, function(err) {resolver.reject(err,true)});
-		}
-	});
-	
-	return future;
+	return nfc._NDEFMessageForRecordIds(this.props.Records);
 };
 
 
@@ -385,18 +378,6 @@ NDEFRecordURI = function(uri) {
 
 NDEFRecordURI.prototype = new nfc.NDEFRecordURI();
 NDEFRecordURI.prototype.constructor = NDEFRecordURI;
-
-
-
-/*****************************************************************************/
-
-nfc.NDEFRecordForProps = function(props) {
-	if (props.Type == "Text")
-		return new nfc.NDEFRecordText(props);
-	if (props.Type == "URI")
-		return new nfc.NDEFRecordURI(props);
-	return new nfc.NDEFRecord(props);
-};
 
 
 
