@@ -148,30 +148,12 @@ nfc._init = function(uri, manifest) {
 
 
 nfc.startPoll = function() {
-	function onsuccess() {
-		cloudeebus.log("startPoll onsuccess Future state: " + this.state + ", result: " + this.result);
-		nfc.polling = true;
-	}
-	
-	function onerror() {
-		cloudeebus.log("startPoll onerror Future state: " + this.state + ", result: " + this.result);
-	}
-	
-	return nfc._adapter.StartPollLoop("Initiator").then(onsuccess, onerror);
+	return nfc._adapter.StartPollLoop("Initiator").then(function(){nfc.polling=true;});
 };
 
 
 nfc.stopPoll = function() {
-	function onsuccess() {
-		cloudeebus.log("stopPoll onsuccess Future state: " + this.state + ", result: " + this.result);
-		nfc.polling = false;
-	}
-	
-	function onerror() {
-		cloudeebus.log("stopPoll onerror Future state: " + this.state + ", result: " + this.result);
-	}
-	
-	return nfc._adapter.StopPollLoop("Initiator").then(onsuccess, onerror);
+	return nfc._adapter.StopPollLoop().then(function(){nfc.polling=false;});
 };
 
 

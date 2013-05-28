@@ -7,16 +7,12 @@
 		outLog = document.getElementById("outLog");
 		writeLog = document.getElementById("writeLog");
 		recordContentText = document.getElementById("recordContentText");
-		// logging
-		cloudeebus.log = function(str) {
-			outLog.innerHTML += "<hr>[LOG]" + str + "<hr>";
-		}
 		// NFCManager event handlers
 		nfc.onpollstart = function(event) {
-			cloudeebus.log(JSON.stringify(event));
+			document.tagManagement.tagListener.selectedIndex=1;
 		};
 		nfc.onpollstop = function(event) {
-			cloudeebus.log(JSON.stringify(event));
+			document.tagManagement.tagListener.selectedIndex=0;
 		};
 		// initial state with tag reading disabled
 		nfcListen(false);
@@ -64,23 +60,19 @@
 	function nfcListen(enabled) {
 		if (enabled) {
 			nfc.ontagfound = function(event) {
-				cloudeebus.log(JSON.stringify(event));
 				readOnAttach(event.param);
 			};
 			nfc.ontaglost = function(event) {
-				cloudeebus.log(JSON.stringify(event));
 				outLog.innerHTML += "<br><b>Tag detached</b><hr>";
 			};
 			nfc.onpeerfound = function(event) {
-				cloudeebus.log(JSON.stringify(event));
 				peerOnAttach(event.param);
 			};
 			nfc.onpeerlost = function(event) {
-				cloudeebus.log(JSON.stringify(event));
 				outLog.innerHTML += "<br><b>Peer detached</b><hr>";
 			};
 			nfc.startPoll().then(function() {
-				document.tagManagement.tagListener.selectedIndex=1;
+				outLog.innerHTML += "<hr><b>Tag / Peer read listeners registered</b><hr>";
 			});
 		}
 		else {
@@ -89,7 +81,7 @@
 			nfc.onpeerfound = null;
 			nfc.onpeerlost = null;
 			nfc.stopPoll().then(function() {
-				document.tagManagement.tagListener.selectedIndex=0;
+				outLog.innerHTML += "<hr><b>Tag / Peer read listeners removed</b><hr>";
 			});
 		}
 	}
@@ -135,12 +127,10 @@
 
     function writeMessage() {
 		nfc.ontagfound = function(event) {
-			cloudeebus.log(JSON.stringify(event));
 			tagWriteOnAttach(event.param);
 		};
 		nfc.ontaglost = writeOnDetach;
 		nfc.onpeerfound = function(event) {
-			cloudeebus.log(JSON.stringify(event));
 			peerWriteOnAttach(event.param);
 		};
 		nfc.onpeerlost = writeOnDetach;
