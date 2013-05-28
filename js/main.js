@@ -14,30 +14,12 @@
 		// NFCManager event handlers
 		nfc.onpollstart = function(event) {
 			cloudeebus.log(JSON.stringify(event));
-			document.tagManagement.tagListener.selectedIndex=1;
 		};
 		nfc.onpollstop = function(event) {
 			cloudeebus.log(JSON.stringify(event));
-			document.tagManagement.tagListener.selectedIndex=0;
-		};
-		nfc.ontagfound = function(event) {
-			cloudeebus.log(JSON.stringify(event));
-			readOnAttach(event.param);
-		};
-		nfc.ontaglost = function(event) {
-			cloudeebus.log(JSON.stringify(event));
-			outLog.innerHTML += "<br><b>Tag, detached</b><hr>";
-		};
-		nfc.onpeerfound = function(event) {
-			cloudeebus.log(JSON.stringify(event));
-			peerOnAttach(event.param);
-		};
-		nfc.onpeerlost = function(event) {
-			cloudeebus.log(JSON.stringify(event));
-			outLog.innerHTML += "<br><b>Peer detached</b><hr>";
 		};
 		// initial state with tag reading disabled
-		readNFCTag(false);
+		nfcListen(false);
 	}
 	
 	function clearResults() {
@@ -69,7 +51,7 @@
 	function readOnAttach(nfcTag) {
 		outLog.innerHTML += "<hr><b>Tag found</b><br>";
 		outLog.innerHTML += "Tag type:" + nfcTag.type + "<br>";
-		nfcTag.readNDEF(logMessage);
+		nfcTag.readNDEF().then(logMessage);
 	}
 	
     // NFC Peer read callback
@@ -78,14 +60,34 @@
 		peer.setReceiveNDEFListener(logMessage);
 	}
 
-    // Manage NFC Tag reading
-	function readNFCTag(enabled) {
+    // Manage NFC Tag / peer listening
+	function nfcListen(enabled) {
 		if (enabled) {
+			nfc.ontagfound = function(event) {
+				cloudeebus.log(JSON.stringify(event));
+				readOnAttach(event.param);
+			};
+			nfc.ontaglost = function(event) {
+				cloudeebus.log(JSON.stringify(event));
+				outLog.innerHTML += "<br><b>Tag detached</b><hr>";
+			};
+			nfc.onpeerfound = function(event) {
+				cloudeebus.log(JSON.stringify(event));
+				peerOnAttach(event.param);
+			};
+			nfc.onpeerlost = function(event) {
+				cloudeebus.log(JSON.stringify(event));
+				outLog.innerHTML += "<br><b>Peer detached</b><hr>";
+			};
 			nfc.startPoll().then(function() {
 				document.tagManagement.tagListener.selectedIndex=1;
 			});
 		}
 		else {
+			nfc.ontagfound = null;
+			nfc.ontaglost = null;
+			nfc.onpeerfound = null;
+			nfc.onpeerlost = null;
 			nfc.stopPoll().then(function() {
 				document.tagManagement.tagListener.selectedIndex=0;
 			});
@@ -115,7 +117,7 @@
 	function tagWriteOnAttach(nfcTag) {
 		if (!messageToWrite)
 			alert("No message to write");
-		nfcTag.writeNDEF(messageToWrite, writeSuccess, writeError);
+		nfcTag.writeNDEF(messageToWrite).then(writeSuccess, writeError);
 	}    
 
 	function peerWriteOnAttach(nfcPeer) {
@@ -126,20 +128,27 @@
 
 	function writeOnDetach() {
 		outLog.innerHTML += "<br><b>Tag / Peer detached</b><br>";
-		adapter.unsetTagListener();
-		adapter.unsetPeerListener();
+		nfcListen(true);
 	}
 	
     // Manage NDEF message writing
 
     function writeMessage() {
-		adapter.setTagListener({onattach: tagWriteOnAttach, ondetach: writeOnDetach});
-		adapter.setPeerListener({onattach: peerWriteOnAttach, ondetach: writeOnDetach});
-		adapter.setPolling(true);
+		nfc.ontagfound = function(event) {
+			cloudeebus.log(JSON.stringify(event));
+			tagWriteOnAttach(event.param);
+		};
+		nfc.ontaglost = writeOnDetach;
+		nfc.onpeerfound = function(event) {
+			cloudeebus.log(JSON.stringify(event));
+			peerWriteOnAttach(event.param);
+		};
+		nfc.onpeerlost = writeOnDetach;
+		nfc.startPoll();
     }
 
     function writeRecordURL(content) {
-		readNFCTag(false);
+		nfcListen(false);
 		writeLog.innerHTML = "Approach Tag / Peer to write URI...";
 		var record = new NDEFRecordURI(content);
 		messageToWrite = new NDEFMessage([record]);
@@ -147,7 +156,7 @@
     }
 
     function writeRecordText(content) {
-		readNFCTag(false);
+		nfcListen(false);
 		writeLog.innerHTML = "Approach Tag / Peer to write Text...";
 		var record = new NDEFRecordText(content,"en-US","UTF-8");
 		messageToWrite = new NDEFMessage([record]);

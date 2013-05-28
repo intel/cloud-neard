@@ -26,47 +26,46 @@ nfc._reset = function() {
 	nfc._uri = null;
 	nfc._manager = null;
 	nfc._adapter = null;
+	nfc._tag = null;
+	nfc._peer = null;
 	nfc.polling = false;
 };
 
 
 nfc._adapterChanged = function(key, value) {
 	
-	var tag = null;
-	var peer = null;
-	
 	function onTagPropsOk(props) {
-		tag.props = props;
-		tag.type = props.Type;
+		nfc._tag.props = props;
+		nfc._tag.type = props.Type;
 		if (nfc.ontagfound)
-			nfc.ontagfound({type: "tagfound", param: tag});
+			nfc.ontagfound({type: "tagfound", param: nfc._tag});
 	}
 	
 	function onPeerPropsOk(props) {
-		peer.props = props;
+		nfc._peer.props = props;
 		if (nfc.onpeerfound)
-			nfc.onpeerfound({type: "peerfound", param: peer});
+			nfc.onpeerfound({type: "peerfound", param: nfc._peer});
 	}
 	
 	function onTagFound(tagId) {
-		if (tag) /* trigger "found" callback only once */
+		if (nfc._tag) /* trigger "found" callback only once */
 			return;
-		tag = new nfc.NFCTag(nfc._bus.getObject(nfc._busName, tagId));
-		tag.proxy.callMethod("org.neard.Tag", "GetProperties", 
+		nfc._tag = new nfc.NFCTag(nfc._bus.getObject(nfc._busName, tagId));
+		nfc._tag.proxy.callMethod("org.neard.Tag", "GetProperties", 
 				[]).then(onTagPropsOk);
 	}
 	
 	function onPeerFound(deviceId) {
-		if (peer) /* trigger "found" callback only once */
+		if (nfc._peer) /* trigger "found" callback only once */
 			return;
-		peer = new nfc.NFCPeer(nfc._bus.getObject(nfc._busName, deviceId));
-		peer.proxy.callMethod("org.neard.Device", "GetProperties", 
+		nfc._peer = new nfc.NFCPeer(nfc._bus.getObject(nfc._busName, deviceId));
+		nfc._peer.proxy.callMethod("org.neard.Device", "GetProperties", 
 				[]).then(onPeerPropsOk);
 	}
 	
 	if (key == "Tags") {
 		if (value.length == 0) {
-			tag = null;
+			nfc._tag = null;
 			if (nfc.ontaglost)
 				nfc.ontaglost({type: "taglost"});
 			nfc.startPoll();
@@ -76,7 +75,7 @@ nfc._adapterChanged = function(key, value) {
 	}
 	if (key == "Devices") {
 		if (value.length == 0) {
-			peer = null;
+			nfc._peer = null;
 			if (nfc.onpeerlost)
 				nfc.onpeerlost({type: "peerlost"});
 			nfc.startPoll();
@@ -268,34 +267,38 @@ nfc.NFCTag = function(proxy) {
 };
 
 
-nfc.NFCTag.prototype.readNDEF = function(readCB, errorCB) {
+nfc.NFCTag.prototype.readNDEF = function() {
 	
 	var self = this;
 	
-	if (!self.props)
-		return errorCB("Tag properties unknown.");
+	var future = new cloudeebus.Future(function (resolver) {
 	
-	var records = [];
+		if (!self.props)
+			resolver.reject("Tag properties unknown.", true);
+		
+		var records = [];
+		
+		function onRecPropsOk(props) {
+			records.push(nfc.NDEFRecordForProps(props));
+			if (records.length == self.props.Records.length)
+				resolver.resolve(new NDEFMessage(records), true);
+		}
+		
+		for (var i=0; i<self.props.Records.length; i++) {
+			var recProxy = nfc._bus.getObject(nfc._busName, self.props.Records[i]);
+			recProxy.callMethod("org.neard.Record", "GetProperties", 
+					[]).then(onRecPropsOk, function(err) {resolver.reject(err,true)});
+		}
+	});
 	
-	function onRecPropsOk(props) {
-		records.push(nfc.NDEFRecordForProps(props));
-		if (records.length == self.props.Records.length && readCB)
-			readCB(new NDEFMessage(records));
-	}
-	
-	for (var i=0; i<self.props.Records.length; i++) {
-		var recProxy = nfc._bus.getObject(nfc._busName, self.props.Records[i]);
-		recProxy.callMethod("org.neard.Record", "GetProperties", 
-				[]).then(onRecPropsOk, errorCB);
-	}
+	return future;
 };
 
 
-nfc.NFCTag.prototype.writeNDEF = function(ndefMessage, successCB, errorCB) {
+nfc.NFCTag.prototype.writeNDEF = function(ndefMessage) {
 	var ndefRecord = ndefMessage.records[0];
 	var rec = ndefRecord.neardRecord();
-	this.proxy.callMethod("org.neard.Tag", "Write", 
-			[rec]).then(successCB, errorCB);
+	return this.proxy.callMethod("org.neard.Tag", "Write", [rec]);
 };
 
 
