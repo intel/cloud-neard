@@ -29,7 +29,7 @@ var dbus = { // hook object for dbus types not translated by python-json
 /*****************************************************************************/
 
 var cloudeebus = window.cloudeebus = {
-		version: "0.4.0",
+		version: "0.5.0",
 		minVersion: "0.3.2"
 };
 
@@ -1008,9 +1008,8 @@ cloudeebus.ProxyObject.prototype.callMethod = function(ifName, method, args, sig
 		}
 
 		function callMethodErrorCB(error) {
-			var errorStr = error.desc + " : " + error.uri;
-			cloudeebus.log("Error calling method: " + method + " on object: " + self.objectPath + " : " + errorStr);
-			resolver.reject(errorStr, true);
+			cloudeebus.log("Error calling method: " + method + " on object: " + self.objectPath + " : " + error.desc);
+			resolver.reject(error.desc, true);
 		}
 
 		var arglist = [
