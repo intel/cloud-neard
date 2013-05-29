@@ -41,7 +41,7 @@ nfc.init = function(uri, manifest, successCB, errorCB) {
 	}
 	
 	function onAdapterOk() {
-		nfc.adapter.GetProperties(onAdapterPropsOk, errorCB);
+		nfc.adapter.GetProperties().then(onAdapterPropsOk, errorCB);
 	}
 	
 	function onManagerPropsOk(props) {
@@ -56,7 +56,7 @@ nfc.init = function(uri, manifest, successCB, errorCB) {
 	}
 	
 	function onManagerOk() {
-		nfc.manager.GetProperties(onManagerPropsOk, errorCB);
+		nfc.manager.GetProperties().then(onManagerPropsOk, errorCB);
 	}
 	
 	function onConnectOk() {
@@ -99,7 +99,7 @@ nfc.NFCAdapter.prototype.setPowered = function(state, successCB, errorCB) {
 			successCB();
 	}
 
-	self.proxy.SetProperty("Powered", state, onPoweredOk, errorCB);
+	self.proxy.SetProperty("Powered", state).then(onPoweredOk, errorCB);
 };
 
 
@@ -114,9 +114,9 @@ nfc.NFCAdapter.prototype.setPolling = function(state, successCB, errorCB) {
 	}
 
 	if (state)
-		self.proxy.StartPollLoop("Initiator", onPollingOk, errorCB);
+		self.proxy.StartPollLoop("Initiator").then(onPollingOk, errorCB);
 	else
-		self.proxy.StopPollLoop(onPollingOk, errorCB);
+		self.proxy.StopPollLoop().then(onPollingOk, errorCB);
 };
 
 
@@ -145,7 +145,7 @@ nfc.NFCAdapter.prototype.setListener = function(listenerKey, errorCB) {
 			return;
 		tag = new nfc.NFCTag(nfc.bus.getObject(nfc.busName, tagId));
 		tag.proxy.callMethod("org.neard.Tag", "GetProperties", 
-				[], onTagPropsOk, errorCB);
+				[]).then(onTagPropsOk, errorCB);
 	}
 	
 	function onPeerFound(deviceId) {
@@ -153,7 +153,7 @@ nfc.NFCAdapter.prototype.setListener = function(listenerKey, errorCB) {
 			return;
 		peer = new nfc.NFCPeer(nfc.bus.getObject(nfc.busName, deviceId));
 		peer.proxy.callMethod("org.neard.Device", "GetProperties", 
-				[], onPeerPropsOk, errorCB);
+				[]).then(onPeerPropsOk, errorCB);
 	}
 	
 	function onPropertyChanged(key, table) {
@@ -252,7 +252,7 @@ nfc.NFCPeer.prototype.setReceiveNDEFListener = function(receiveCB, errorCB) {
 		for (var i=0; i<self.props.Records.length; i++) {
 			var recProxy = nfc.bus.getObject(nfc.busName, self.props.Records[i]);
 			recProxy.callMethod("org.neard.Record", "GetProperties", 
-					[], onRecPropsOk, errorCB);
+					[]).then(onRecPropsOk, errorCB);
 		}
 	}
 	
@@ -283,8 +283,18 @@ nfc.NFCPeer.prototype.sendNDEF = function(ndefMessage, successCB, errorCB) {
 		var ndefRecord = ndefMessage.records[i];
 		var rec = ndefRecord.neardRecord();
 		this.proxy.callMethod("org.neard.Device", "Push", 
-			[rec], successCB, errorCB);
+			[rec]).then(successCB, errorCB);
 	}
+};
+
+
+nfc.NFCPeer.prototype.startHandover = function(type, successCB, errorCB) {
+	this.proxy.callMethod("org.neard.Device", "Push", 
+		[{
+			 Type: "Handover",
+			 Carrier: type
+		}]).then( 
+		successCB, errorCB);
 };
 
 
@@ -319,7 +329,7 @@ nfc.NFCTag.prototype.readNDEF = function(readCB, errorCB) {
 	for (var i=0; i<self.props.Records.length; i++) {
 		var recProxy = nfc.bus.getObject(nfc.busName, self.props.Records[i]);
 		recProxy.callMethod("org.neard.Record", "GetProperties", 
-				[], onRecPropsOk, errorCB);
+				[]).then(onRecPropsOk, errorCB);
 	}
 };
 
@@ -328,7 +338,7 @@ nfc.NFCTag.prototype.writeNDEF = function(ndefMessage, successCB, errorCB) {
 	var ndefRecord = ndefMessage.records[0];
 	var rec = ndefRecord.neardRecord();
 	this.proxy.callMethod("org.neard.Tag", "Write", 
-			[rec], successCB, errorCB);
+			[rec]).then(successCB, errorCB);
 };
 
 
