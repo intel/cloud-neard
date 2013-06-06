@@ -87,7 +87,6 @@ nfc._adapterChanged = function(key, value) {
 	
 	function onTagPropsOk(props) {
 		nfc._tag.props = props;
-		nfc._tag.type = props.Type;
 		if (nfc.ontagfound)
 			nfc.ontagfound({type: "tagfound", param: nfc._tag});
 	}
@@ -254,7 +253,6 @@ nfc.NFCPeer.prototype.startHandover = function(type) {
 
 nfc.NFCTag = function(proxy) {
 	this.proxy = proxy;
-	this.type = "GENERIC_TARGET";
 	if (proxy) {
 		this.id = proxy.objectPath;
 	}
