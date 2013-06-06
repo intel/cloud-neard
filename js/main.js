@@ -47,7 +47,6 @@
     // NFC Tag read callback
 	function readOnAttach(nfcTag) {
 		outLog.innerHTML += "<hr><b>Tag found</b><br>";
-		outLog.innerHTML += "Tag type:" + nfcTag.type + "<br>";
 		nfcTag.readNDEF().then(logMessage);
 	}
 	
