@@ -1,5 +1,5 @@
 	// HTML DOM elements
-	var outLog, writeLog, recordContentText;
+	var outLog, writeLog, recordContentText, ndefLog;
 		
 	// HTML page management
 	function initPage() {
@@ -7,6 +7,7 @@
 		outLog = document.getElementById("outLog");
 		writeLog = document.getElementById("writeLog");
 		recordContentText = document.getElementById("recordContentText");
+		ndefLog = document.getElementById("ndefLog");
 		// NFCManager event handlers
 		nfc.onpollstart = function(event) {
 			document.tagManagement.tagListener.selectedIndex=1;
@@ -154,6 +155,54 @@
 		messageToWrite = new NDEFMessage([record]);
 		writeMessage();
     }
+
+    // NDEF Agent Management
+    function ndefLog_func(log_str) {
+    	ndefLog.innerHTML += "<br> " + log_str;
+   }
+    
+    function NdefAgentRegisteredSuccessCB(NDEFAgent) {
+    	ndefAgent = NDEFAgent;
+    	ndefLog_func("main: " + ndefAgent.objectPath + " successfully registered for tag type : " + ndefAgent.tagType);
+    }
+    
+    function NdefAgentRegisteredErrorCB(error) {
+    	if (error.desc == undefined) {
+    		ndefLog_func("main: <b> >> " + error + "</b>");
+    	} else {
+    		ndefLog_func("main: <b> >> " + error.desc + "</b>");
+    	}
+    }
+    
+    function registerNDEFAgent(tagType) {
+    	neardService.registerNdefAgent(tagType).then(NdefAgentRegisteredSuccessCB, NdefAgentRegisteredErrorCB);
+    }
+    
+    function NdefAgentUnregisterSuccessCB() {
+    	ndefLog_func("main: " + ndefAgent.objectPath + " successfully unregistered for tag type : " + ndefAgent.tagType );
+    	ndefAgent = null;
+    }
+    
+    function NdefAgentUnregisterErrorCB(error) {
+    	ndefLog_func("main: <b>>> " + error + "</b><br>");
+    }
+    
+    function unregisterNDEFAgent(tagType) {
+    	neardService.unregisterNdefAgent(tagType).then(NdefAgentUnregisterSuccessCB, NdefAgentUnregisterErrorCB);
+    }
+    
+    function serviceReleaseSuccessCB(service) {
+    	ndefLog_func("main: serviceReleaseSuccessCB<br>");
+    }
+    
+    function serviceReleaseErrorCB(error) {
+    	ndefLog_func("main: serviceReleaseErrorCB: <b>" + error + "</b>");
+    }
+    
+    function unregisterService() {
+    	neardService.unregisterService().then(serviceReleaseSuccessCB, serviceReleaseErrorCB);
+    }
+    
     
 	//
 	// Debug log function

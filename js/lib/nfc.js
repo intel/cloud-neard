@@ -26,6 +26,7 @@ nfc._reset = function() {
 	nfc._uri = null;
 	nfc._manager = null;
 	nfc._adapter = null;
+	nfc.defaultAdapter = null;
 	nfc._tag = null;
 	nfc._peer = null;
 	nfc.polling = false;
@@ -65,7 +66,6 @@ nfc._NDEFMessageForRecordIds = function(ids) {
 	
 	return future;
 }
-
 
 
 /*****************************************************************************/
@@ -192,8 +192,8 @@ nfc._init = function(uri, manifest) {
 		}
 		
 		function onerror(error) {
-			cloudeebus.log("NFC init error: " + error.desc);
-			resolver.reject(error.desc, true);			
+			cloudeebus.log("NFC init error: " + error);
+			resolver.reject(error, true);			
 		}
 		
 		cloudeebus.connect(uri, manifest, onConnectOk, onerror);
@@ -381,6 +381,7 @@ NDEFRecordURI.prototype.constructor = NDEFRecordURI;
 
 
 
+/*****************************************************************************/
 
 
 
