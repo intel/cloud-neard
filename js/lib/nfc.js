@@ -18,12 +18,16 @@
 
 /*****************************************************************************/
 
-var nfc = window.nfc = {};
+
+var cloudeebus = require('cloudeebus').cloudeebus;
+
+var nfc = {};
+exports.nfc = nfc;
+exports.cloudeebus = cloudeebus;
 
 nfc._reset = function() {
 	nfc._busName = "org.neard";
 	nfc._bus = null;
-	nfc._uri = null;
 	nfc._manager = null;
 	nfc._adapter = null;
 	nfc._tag = null;
@@ -153,7 +157,7 @@ nfc._adapterChanged = function(key, value) {
 
 /*****************************************************************************/
 
-nfc._init = function(uri, manifest) {
+nfc._init = function() {
 	nfc._reset();
 	
 	var future = new cloudeebus.Future(function (resolver) {
@@ -184,18 +188,13 @@ nfc._init = function(uri, manifest) {
 			nfc._manager.GetProperties().then(onManagerPropsOk, onerror);
 		}
 		
-		function onConnectOk() {
-			nfc._bus = cloudeebus.SystemBus();
-			nfc._uri = uri;
-			nfc._manager = nfc._bus.getObject(nfc._busName, "/", onManagerOk, onerror);
-		}
-		
 		function onerror(error) {
 			cloudeebus.log("NFC init error: " + error.desc);
 			resolver.reject(error.desc, true);			
 		}
 		
-		cloudeebus.connect(uri, manifest, onConnectOk, onerror);
+		nfc._bus = cloudeebus.SystemBus();
+		nfc._manager = nfc._bus.getObject(nfc._busName, "/", onManagerOk, onerror);
 	});
 	
 	return future;

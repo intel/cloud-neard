@@ -1,0 +1,19 @@
+{
+  "name": "cloud-neard",
+  "version": "0.5.0",
+  "description": "Neard NFC APIs for Node.js",
+  "author": "Luc Yriarte <luc.yriarte@intel.com>",
+  "maintainers": [
+      "Luc Yriarte <luc.yriarte@intel.com>",
+      "Frederic Paut <frederic.paut@intel.com>"
+  ],
+  "homepage": "https://github.com/01org/cloud-neard/wiki",
+  "repository": {"type": "git","url": "git://github.com/01org/cloud-neard.git"},
+  "main": "./js/main.js",
+  "scripts": {"test": "./test"},
+  "engines": {"node": ">=0.8.0"},
+  "dependencies": {
+  	"cloudeebus": ">=0.5.0"
+  },
+  "licenses": [{"type": "Apache 2.0","url": "http://www.apache.org/licenses/LICENSE-2.0"}]
+}
