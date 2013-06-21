@@ -27,27 +27,34 @@ var neardService = {
 
 /*****************************************************************************/
 
-// Generic definition for an agent
-Agent = function(srvDbusName, objPath, xml) {
-	this.srvName = srvDbusName;
-	this.registered = false;
-	this.xml = xml;
-	return this;
-};
-
 // creation of an agent specific for NDEF
-NDEFAgent = function(srvDbusName, tagType) {
-	this.tagType = tagType;
-	this.objectPath = tagType.replace(/:/g, "");
-	this.objectPath = this.objectPath.replace(/-/g, "_");
-	this.objectPath = this.objectPath.toUpperCase();
-	this.objectPath = "/CloudeebusNdefagent/" + this.objectPath;
+NDEFAgent = function(srvDbusName, tagType, jsHdl) {
+	var objPath = tagType.replace(/:/g, "");
+	objPath = objPath.replace(/-/g, "_");
+	objPath = objPath.toUpperCase();
+	objPath = "/CloudeebusNdefagent/" + objPath;
 	var specificXml = '<!DOCTYPE node PUBLIC "-//freedesktop//DTD D-BUS Object Introspection 1.0//EN"\n"http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd">\n<node><interface name="org.neard.NDEFAgent"><method name="GetNDEF"><arg name="values" type="a{sv}" direction="in"/></method><method name="Release"></method></interface></node>';	
-	Agent.call(this, srvDbusName, this.objectPath, specificXml);
+	Agent.call(this, srvDbusName, objPath, jsHdl, specificXml);
 	
 	this.tagType = tagType;
 };
 
+
+convertIntArrayToString = function(intArray, escape) {
+	var lenght = 0;
+	var newString = "";
+	while (lenght <= intArray.length) {
+		var char = intArray[lenght++] & 0xFF;
+		if (char > 32 && char < 128)
+			newString = newString + String.fromCharCode(char);
+		else
+			if (escape)
+				newString = newString + '\\' + char;
+			else
+				newString = newString + '.';
+	}
+	return newString;
+};
 
 /*****************************************************************************/
 neardService.registerNdefAgent = function(tagType) {
@@ -57,11 +64,10 @@ neardService.registerNdefAgent = function(tagType) {
 
 	var future = new cloudeebus.Future(function (resolver) {
 		
-		var ndefAgent = new NDEFAgent(neardService.name, tagType);
+		var ndefAgent = null;
 
 		function errorCB(error) {
-			errorStr = error.desc + " : " + error.uri;
-			resolver.reject(errorStr, true);
+			resolver.reject(error, true);
 		}
 
 		function NeardNDEFAgentUnregisteredSuccessCB() {
@@ -70,22 +76,36 @@ neardService.registerNdefAgent = function(tagType) {
   	        }
 		}
 		
+		function onAgentRemoved(objectPath) {
+			neardService.NDEFagents[ndefAgent.tagType].registered = false;
+			if (neardService.NDEFagents[ndefAgent.tagType] != null) {
+				delete neardService.NDEFagents[ndefAgent.tagType];
+				neardService.NDEFagentSize--;
+			}
+			var errorStr = "Agent : " + objectPath + " removed!";
+			resolver.accept(errorStr, true);
+    	    if (neardService.NDEFagentSize <= 0) {
+	    	    neardService.service.remove(null, errorCB);				    	  
+  	        }
+		}
+
+		
 		NdefAgentHandler = {
 			interfaceProxies : {
 			    "org.neard.NDEFAgent" : {
 			        GetNDEF: function(values) {
+			        	var mimeTypeLen = values.NDEF[1];
+			        	var rawDataAsString = convertIntArrayToString(values.NDEF, false);
+			        	var mimeType = rawDataAsString.substring(3, 3 + mimeTypeLen);
 			        	cloudeebus.log("Record datas : "+ values.Records);
-			        	cloudeebus.log("NDEF datas : "+ values.NDEF);
+			        	cloudeebus.log("Extracted Mime-type is : "+ mimeType);
+			        	cloudeebus.log("NDEF raw datas : "+ convertIntArrayToString(values.NDEF, true));
                     }, 
 			        Release: function() {			        	
+			        	cloudeebus.log("NdefAgentHandler().Release() !!! ");
 			        	if (1) { // until fixed (Neard side)
 							if (neardService.NDEFagents[ndefAgent.tagType] != null) {
-					        	neardService.service.delAgent(ndefAgent.objectPath);
-								delete neardService.NDEFagents[ndefAgent.tagType];
-								neardService.NDEFagentSize--;
-								var errorStr = "Agent : " + ndefAgent.objectPath + " removed!";
-								resolver.accept(errorStr, true);
-								NeardNDEFAgentUnregisteredSuccessCB();
+					        	neardService.service.delAgent(ndefAgent, onAgentRemoved, errorCB);
 							}
 			        	} else
 			        		nfc._manager.UnregisterNDEFAgent(ndefAgent.objectPath, ndefAgent.tagType).then(NeardNDEFAgentUnregisteredSuccessCB);
@@ -97,6 +117,7 @@ neardService.registerNdefAgent = function(tagType) {
 		function NeardNDEFAgentRegisteredSuccessCB() {
 			try {
 				var result = [ndefAgent];
+				ndefAgent.registered = true;
 				resolver.accept(result[0], true);
 			}
 			catch (e) {
@@ -115,15 +136,17 @@ neardService.registerNdefAgent = function(tagType) {
 
 		function onServiceAdded_addAgent(service) {
 			neardService.service = service;
-			service.addAgent(ndefAgent.objectPath, ndefAgent.xml, NdefAgentHandler, onAgentAdded, errorCB);
+			service.addAgent(ndefAgent, onAgentAdded, errorCB);
 		}
 
+		
+		var ndefAgent = new NDEFAgent(neardService.name, tagType, NdefAgentHandler);
 		// Create service if needed
 		if (!neardService.service) {			
 			nfc._bus.addService(neardService.name).then(onServiceAdded_addAgent);
 		} else {
 			// Adding directly agent if service already exist
-			neardService.service.addAgent(ndefAgent.objectPath, ndefAgent.xml, NdefAgentHandler, onAgentAdded, errorCB);
+			neardService.service.addAgent(ndefAgent, onAgentAdded, errorCB);
 		}
 	});
 	
@@ -140,7 +163,7 @@ neardService.unregisterNdefAgent = function(tagType) {
 	var future = new cloudeebus.Future(function (resolver) {
 		
 		var ndefAgent = neardService.NDEFagents[tagType];
-		if (!ndefAgent) {
+		if (!ndefAgent && !ndefAgent.registered) {
 			errorStr = "There is no registered agent for tag type : " + tagType;
 			resolver.reject(errorStr, true);
 			return;
@@ -158,8 +181,10 @@ neardService.unregisterNdefAgent = function(tagType) {
 		}
 
 		function onAgentRemoved(objectPath) {
+			neardService.NDEFagents[ndefAgent.tagType].registered = false;
 			if (neardService.NDEFagents[ndefAgent.tagType] != null) {
 				delete neardService.NDEFagents[ndefAgent.tagType];
+				neardService.NDEFagents[ndefAgent.tagType] = null;
 				neardService.NDEFagentSize--;
 			}
 			var errorStr = "Agent : " + objectPath + " removed!";
@@ -171,11 +196,12 @@ neardService.unregisterNdefAgent = function(tagType) {
 
 		function onNDEFAgentUnregistered(objectPath) {
 			// Remove agent from service
-			if (neardService.NDEFagents[ndefAgent.tagType] != null)
-				neardService.service.delAgent(ndefAgent.objectPath, onAgentRemoved, errorCB);
+			if ((ndefAgent.tagType in neardService.NDEFagents) == true)
+				neardService.service.delAgent(ndefAgent, onAgentRemoved, errorCB);
 		}
 
-		nfc._manager.UnregisterNDEFAgent(ndefAgent.objectPath, ndefAgent.tagType).then(onNDEFAgentUnregistered, errorCB);
+		if (neardService.NDEFagents[ndefAgent.tagType])
+			nfc._manager.UnregisterNDEFAgent(ndefAgent.objectPath, ndefAgent.tagType).then(onNDEFAgentUnregistered, errorCB);
 	});
 	
 	return future;
@@ -190,9 +216,31 @@ neardService.unregisterService = function() {
 
 	var future = new cloudeebus.Future(function (resolver) {
 		
+		function onSuccessCB(serviceName) {
+			try {
+				var result = [neardService.service];
+				resolver.accept(result[0], true);
+				neardService.service = null;
+			}
+			catch (e) {
+				cloudeebus.log("Method callback exception: " + e);
+				resolver.reject(e, true);
+			}
+		}
+
+		function onErrorCB(error) {
+			errorStr = error.desc + " : " + error.uri;
+			resolver.reject(errorStr, true);
+		}
+
 		// Release all NDEF agents
-		for (var ndefAgent in neardService.NDEFagents)
-			cloudeebus.log(JSON.stringify(ndefAgent));
+		for (var tagType in neardService.NDEFagents) {
+			agent = neardService.NDEFagents[tagType];
+			cloudeebus.log(JSON.stringify(agent));
+			neardService.unregisterNdefAgent(tagType);
+		}
+		
+	    neardService.service.remove(onSuccessCB, onErrorCB);				    	  
 	});
 	
 	return future;
