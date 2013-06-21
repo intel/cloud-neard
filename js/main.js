@@ -161,17 +161,24 @@
     	ndefLog.innerHTML += "<br> " + log_str;
    }
     
+    function getError(error) {
+    	if (error.desc && error.uri)
+    		return error.desc + " : " + error.uri;
+    	if (error.desc)
+    		return error.desc;
+    	if (error.uri)
+    		return error.uri;
+    	if (error.message)
+    		return error.message;
+    	return error;
+    }
     function NdefAgentRegisteredSuccessCB(NDEFAgent) {
     	ndefAgent = NDEFAgent;
     	ndefLog_func("main: " + ndefAgent.objectPath + " successfully registered for tag type : " + ndefAgent.tagType);
     }
     
     function NdefAgentRegisteredErrorCB(error) {
-    	if (error.desc == undefined) {
-    		ndefLog_func("main: <b> >> " + error + "</b>");
-    	} else {
-    		ndefLog_func("main: <b> >> " + error.desc + "</b>");
-    	}
+    	ndefLog_func("main: <b> >> " + getError(error) + "</b>");
     }
     
     function registerNDEFAgent(tagType) {
@@ -184,7 +191,7 @@
     }
     
     function NdefAgentUnregisterErrorCB(error) {
-    	ndefLog_func("main: <b>>> " + error + "</b><br>");
+    	ndefLog_func("main: <b>>> " + getError(error) + "</b><br>");
     }
     
     function unregisterNDEFAgent(tagType) {
@@ -192,11 +199,11 @@
     }
     
     function serviceReleaseSuccessCB(service) {
-    	ndefLog_func("main: serviceReleaseSuccessCB<br>");
+    	ndefLog_func("main: service " + service.name + " released!<br>");
     }
     
     function serviceReleaseErrorCB(error) {
-    	ndefLog_func("main: serviceReleaseErrorCB: <b>" + error + "</b>");
+    	ndefLog_func("main: serviceReleaseErrorCB: <b>" + getError(error) + "</b>");
     }
     
     function unregisterService() {
