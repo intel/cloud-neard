@@ -1,5 +1,5 @@
 	// HTML DOM elements
-	var outLog, writeLog, recordContentText;
+	var outLog, writeLog, recordContentText, ndefLog;
 		
 	// HTML page management
 	function initPage() {
@@ -7,6 +7,7 @@
 		outLog = document.getElementById("outLog");
 		writeLog = document.getElementById("writeLog");
 		recordContentText = document.getElementById("recordContentText");
+		ndefLog = document.getElementById("ndefLog");
 		// NFCManager event handlers
 		nfc.onpollstart = function(event) {
 			document.tagManagement.tagListener.selectedIndex=1;
@@ -154,6 +155,68 @@
 		messageToWrite = new NDEFMessage([record]);
 		writeMessage();
     }
+
+    // NDEF Agent Management
+    function ndefLog_func(log_str) {
+    	ndefLog.innerHTML += "<br> " + log_str;
+   }
+    
+    function getError(error) {
+    	if (error.desc && error.uri)
+    		return error.desc + " : " + error.uri;
+    	if (error.desc)
+    		return error.desc;
+    	if (error.uri)
+    		return error.uri;
+    	if (error.message)
+    		return error.message;
+    	return error;
+    }
+    function NdefAgentRegisteredSuccessCB(NDEFAgent) {
+    	ndefAgent = NDEFAgent;
+    	ndefLog_func("main: " + ndefAgent.objectPath + " successfully registered for tag type : " + ndefAgent.tagType);
+    }
+    
+    function NdefAgentRegisteredErrorCB(error) {
+    	ndefLog_func("main: <b> >> " + getError(error) + "</b>");
+    }
+    
+    function parsingFunc(mimeType, rawData, rawDataEscaped, rawDataLen) {
+    	ndefLog_func("main: <b> >> mime-type= " + mimeType + "</b>");
+    	ndefLog_func("main: <b> >> raw data  len = " + rawDataLen + "</b>");
+    	ndefLog_func("main: <b> >> raw data escaped = " + rawDataEscaped + "</b>");
+    	ndefLog_func("main: <b> >> raw data  = " + rawData + "</b>");
+    	
+    }
+    function registerNDEFAgent(tagType) {
+    	neardService.registerNdefAgent(tagType, parsingFunc).then(NdefAgentRegisteredSuccessCB, NdefAgentRegisteredErrorCB);
+    }
+    
+    function NdefAgentUnregisterSuccessCB() {
+    	ndefLog_func("main: " + ndefAgent.objectPath + " successfully unregistered for tag type : " + ndefAgent.tagType );
+    	ndefAgent = null;
+    }
+    
+    function NdefAgentUnregisterErrorCB(error) {
+    	ndefLog_func("main: <b>>> " + getError(error) + "</b><br>");
+    }
+    
+    function unregisterNDEFAgent(tagType) {
+    	neardService.unregisterNdefAgent(tagType).then(NdefAgentUnregisterSuccessCB, NdefAgentUnregisterErrorCB);
+    }
+    
+    function serviceReleaseSuccessCB(service) {
+    	ndefLog_func("main: service " + service.name + " released!<br>");
+    }
+    
+    function serviceReleaseErrorCB(error) {
+    	ndefLog_func("main: serviceReleaseErrorCB: <b>" + getError(error) + "</b>");
+    }
+    
+    function unregisterService() {
+    	neardService.unregisterService().then(serviceReleaseSuccessCB, serviceReleaseErrorCB);
+    }
+    
     
 	//
 	// Debug log function
