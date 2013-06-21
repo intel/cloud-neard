@@ -43,7 +43,7 @@ NDEFAgent = function(srvDbusName, tagType, jsHdl) {
 convertIntArrayToString = function(intArray, escape) {
 	var lenght = 0;
 	var newString = "";
-	while (lenght <= intArray.length) {
+	while (lenght < intArray.length) {
 		var char = intArray[lenght++] & 0xFF;
 		if (char > 32 && char < 128)
 			newString = newString + String.fromCharCode(char);
