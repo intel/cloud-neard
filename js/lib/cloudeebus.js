@@ -1008,9 +1008,8 @@ cloudeebus.ProxyObject.prototype.callMethod = function(ifName, method, args, sig
 		}
 
 		function callMethodErrorCB(error) {
-			var errorStr = error.desc + " : " + error.uri;
-			cloudeebus.log("Error calling method: " + method + " on object: " + self.objectPath + " : " + errorStr);
-			resolver.reject(errorStr, true);
+			cloudeebus.log("Error calling method: " + method + " on object: " + self.objectPath + " : " + error.desc);
+			resolver.reject(error.desc, true);
 		}
 
 		var arglist = [
