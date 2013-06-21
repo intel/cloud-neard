@@ -57,7 +57,7 @@ convertIntArrayToString = function(intArray, escape) {
 };
 
 /*****************************************************************************/
-neardService.registerNdefAgent = function(tagType) {
+neardService.registerNdefAgent = function(tagType, parsingFunc) {
 	
 	// For debug only
 	cloudeebus.log = ndefLog_func;
@@ -94,15 +94,18 @@ neardService.registerNdefAgent = function(tagType) {
 			interfaceProxies : {
 			    "org.neard.NDEFAgent" : {
 			        GetNDEF: function(values) {
+			        	cloudeebus.log("Record datas : "+ values.Records);
 			        	var mimeTypeLen = values.NDEF[1];
 			        	var rawDataAsString = convertIntArrayToString(values.NDEF, false);
+			        	var rawDataAsStringEscaped = convertIntArrayToString(values.NDEF, true);
 			        	var mimeType = rawDataAsString.substring(3, 3 + mimeTypeLen);
-			        	cloudeebus.log("Record datas : "+ values.Records);
-			        	cloudeebus.log("Extracted Mime-type is : "+ mimeType);
-			        	cloudeebus.log("NDEF raw datas : "+ convertIntArrayToString(values.NDEF, true));
+			        	parsingFunc(mimeType, 
+			        				rawDataAsString.substring(3 + mimeTypeLen), 
+			        				rawDataAsStringEscaped,
+			        				rawDataAsString.length);
                     }, 
 			        Release: function() {			        	
-			        	cloudeebus.log("NdefAgentHandler().Release() !!! ");
+			        	cloudeebus.log("NdefAgentHandler().Release()");
 			        	if (1) { // until fixed (Neard side)
 							if (neardService.NDEFagents[ndefAgent.tagType] != null) {
 					        	neardService.service.delAgent(ndefAgent, onAgentRemoved, errorCB);

@@ -181,8 +181,15 @@
     	ndefLog_func("main: <b> >> " + getError(error) + "</b>");
     }
     
+    function parsingFunc(mimeType, rawData, rawDataEscaped, rawDataLen) {
+    	ndefLog_func("main: <b> >> mime-type= " + mimeType + "</b>");
+    	ndefLog_func("main: <b> >> raw data  len = " + rawDataLen + "</b>");
+    	ndefLog_func("main: <b> >> raw data escaped = " + rawDataEscaped + "</b>");
+    	ndefLog_func("main: <b> >> raw data  = " + rawData + "</b>");
+    	
+    }
     function registerNDEFAgent(tagType) {
-    	neardService.registerNdefAgent(tagType).then(NdefAgentRegisteredSuccessCB, NdefAgentRegisteredErrorCB);
+    	neardService.registerNdefAgent(tagType, parsingFunc).then(NdefAgentRegisteredSuccessCB, NdefAgentRegisteredErrorCB);
     }
     
     function NdefAgentUnregisterSuccessCB() {
