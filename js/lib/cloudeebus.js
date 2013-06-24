@@ -151,14 +151,14 @@ cloudeebus.BusConnection.prototype.getObject = function(busName, objectPath, int
 cloudeebus.BusConnection.prototype.addService = function(serviceName) {
 	var self = this;
 	
-	var future = new cloudeebus.Future(function (resolver) {
+	var promise = new cloudeebus.Promise(function (resolver) {
 	  cloudeebusService = new cloudeebus.Service(self.wampSession, self, serviceName);
 	
 	  function busServiceAddedSuccessCB(service) {
 		  try {
 			  service.isCreated = true;
 			  var result = [cloudeebusService];
-			  resolver.accept(result[0], true);
+			  resolver.fulfill(result[0], true);
 		  }
 		  catch (e) {
 			  cloudeebus.log("Method callback exception: " + e);
@@ -173,7 +173,7 @@ cloudeebus.BusConnection.prototype.addService = function(serviceName) {
 	  cloudeebusService.add(this).then(busServiceAddedSuccessCB, busServiceErrorSuccessCB);
 	});
 	
-	return future;
+	return promise;
 };
 
 cloudeebus.BusConnection.prototype.removeService = function(serviceName, successCB, errorCB) {
@@ -216,15 +216,15 @@ cloudeebus.Service = function(session, busConnection, name) {
 	return this;
 };
 
-cloudeebus.Service.prototype.add = function(future) {
+cloudeebus.Service.prototype.add = function(promise) {
 	var self = this;
-	self.future = future;
-	var resolver = self.future.resolver;
+	self.promise = promise;
+	var resolver = self.promise.resolver;
 	
 	function ServiceAddedSuccessCB(serviceName) {
 		try { // calling dbus hook object function for un-translated types
 			var result = [self];
-			resolver.accept(result[0], true);
+			resolver.fulfill(result[0], true);
 		}
 		catch (e) {
 			cloudeebus.log("Method callback exception: " + e);
@@ -234,7 +234,7 @@ cloudeebus.Service.prototype.add = function(future) {
 	
 	function ServiceAddedErrorCB(error) {
 		cloudeebus.log("Error adding service method: " + self.name + ", error: " + error.desc);
-		self.future.resolver.reject(error.desc, true);
+		self.promise.resolver.reject(error.desc, true);
 	}
 
 	var arglist = [
@@ -244,7 +244,7 @@ cloudeebus.Service.prototype.add = function(future) {
 
 	// call dbusSend with bus type, destination, object, message and arguments
 	this.wampSession.call("serviceAdd", arglist).then(ServiceAddedSuccessCB, ServiceAddedErrorCB);
-	return future;
+	return promise;
 };
 
 cloudeebus.Service.prototype.remove = function(successCB, errorCB) {
@@ -566,25 +566,25 @@ cloudeebus.Promise = function(init) {
 };
 
 
-cloudeebus.Future.prototype.appendWrappers = function(acceptWrapper, rejectWrapper) {
-	this._acceptWrappers.push(acceptWrapper);
+cloudeebus.Promise.prototype.appendWrappers = function(fulfillWrapper, rejectWrapper) {
+	this._fulfillWrappers.push(fulfillWrapper);
 	this._rejectWrappers.push(rejectWrapper);
-	if (this.state == "accepted")
-		_processWrappersAsync(this._acceptWrappers, this.result);
+	if (this.state == "fulfilled")
+		_processWrappersAsync(this._fulfillWrappers, this.result);
 	if (this.state == "rejected")
 		_processWrappersAsync(this._rejectWrappers, this.result);
 };
 
 
-cloudeebus.Future.prototype.then = function(acceptCB, rejectCB) {
-	var future = new cloudeebus.Future();
-	var resolver = future.resolver;
-	var acceptWrapper, rejectWrapper;
+cloudeebus.Promise.prototype.then = function(fulfillCB, rejectCB) {
+	var promise = new cloudeebus.Promise();
+	var resolver = promise.resolver;
+	var fulfillWrapper, rejectWrapper;
 	
-	if (acceptCB)
-		acceptWrapper = function(arg) {
+	if (fulfillCB)
+		fulfillWrapper = function(arg) {
 			try {
-				var value = acceptCB.apply(future, [arg]);
+				var value = fulfillCB.apply(promise, [arg]);
 				resolver.resolve(value, true);
 			}
 			catch (e) {
@@ -611,8 +611,8 @@ cloudeebus.Future.prototype.then = function(acceptCB, rejectCB) {
 			resolver.reject(arg, true);
 		};
 	
-	this.appendWrappers(acceptWrapper,rejectWrapper);
-	return future;
+	this.appendWrappers(fulfillWrapper,rejectWrapper);
+	return promise;
 };
 
 
