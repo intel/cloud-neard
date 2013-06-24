@@ -61,7 +61,7 @@ neardService.registerNdefAgent = function(tagType, parsingFunc) {
 	// For debug only
 	cloudeebus.log = ndefLog_func;
 
-	var future = new cloudeebus.Future(function (resolver) {
+	var promise = new cloudeebus.Promise(function (resolver) {
 		
 		var ndefAgent = null;
 
@@ -82,7 +82,7 @@ neardService.registerNdefAgent = function(tagType, parsingFunc) {
 				neardService.NDEFagentSize--;
 			}
 			var errorStr = "Agent : " + objectPath + " removed!";
-			resolver.accept(errorStr, true);
+			resolver.fulfill(errorStr, true);
     	    if (neardService.NDEFagentSize <= 0) {
 	    	    neardService.service.remove(null, errorCB);				    	  
   	        }
@@ -120,7 +120,7 @@ neardService.registerNdefAgent = function(tagType, parsingFunc) {
 			try {
 				var result = [ndefAgent];
 				ndefAgent.registered = true;
-				resolver.accept(result[0], true);
+				resolver.fulfill(result[0], true);
 			}
 			catch (e) {
 				cloudeebus.log("Method callback exception: " + e);
@@ -152,7 +152,7 @@ neardService.registerNdefAgent = function(tagType, parsingFunc) {
 		}
 	});
 	
-	return future;
+	return promise;
 };
 /*****************************************************************************/
 
@@ -162,7 +162,7 @@ neardService.unregisterNdefAgent = function(tagType) {
 	// For debug only
 	cloudeebus.log = ndefLog_func;
 
-	var future = new cloudeebus.Future(function (resolver) {
+	var promise = new cloudeebus.Promise(function (resolver) {
 		
 		var ndefAgent = neardService.NDEFagents[tagType];
 		if (!ndefAgent && !ndefAgent.registered) {
@@ -179,7 +179,7 @@ neardService.unregisterNdefAgent = function(tagType) {
 		function onServiceRemoved(serviceName) {
 			neardService.service = null;
 			var errorStr = "Service : " + serviceName + " removed!";
-			resolver.accept(errorStr, true);
+			resolver.fulfill(errorStr, true);
 		}
 
 		function onAgentRemoved(objectPath) {
@@ -190,7 +190,7 @@ neardService.unregisterNdefAgent = function(tagType) {
 				neardService.NDEFagentSize--;
 			}
 			var errorStr = "Agent : " + objectPath + " removed!";
-			resolver.accept(errorStr, true);
+			resolver.fulfill(errorStr, true);
     	    if (neardService.NDEFagentSize <= 0) {
 	    	    neardService.service.remove(onServiceRemoved, errorCB);				    	  
   	        }
@@ -206,7 +206,7 @@ neardService.unregisterNdefAgent = function(tagType) {
 			nfc._manager.UnregisterNDEFAgent(ndefAgent.objectPath, ndefAgent.tagType).then(onNDEFAgentUnregistered, errorCB);
 	});
 	
-	return future;
+	return promise;
 };
 /*****************************************************************************/
 
@@ -216,12 +216,12 @@ neardService.unregisterService = function() {
 	// For debug only
 	cloudeebus.log = ndefLog_func;
 
-	var future = new cloudeebus.Future(function (resolver) {
+	var promise = new cloudeebus.Promise(function (resolver) {
 		
 		function onSuccessCB(serviceName) {
 			try {
 				var result = [neardService.service];
-				resolver.accept(result[0], true);
+				resolver.fulfill(result[0], true);
 				neardService.service = null;
 			}
 			catch (e) {
@@ -244,5 +244,5 @@ neardService.unregisterService = function() {
 	    neardService.service.remove(onSuccessCB, onErrorCB);				    	  
 	});
 	
-	return future;
+	return promise;
 };
