@@ -160,24 +160,13 @@
     	ndefLog.innerHTML += "<br> " + log_str;
    }
     
-    function getError(error) {
-    	if (error.desc && error.uri)
-    		return error.desc + " : " + error.uri;
-    	if (error.desc)
-    		return error.desc;
-    	if (error.uri)
-    		return error.uri;
-    	if (error.message)
-    		return error.message;
-    	return error;
-    }
     function NdefAgentRegisteredSuccessCB(NDEFAgent) {
     	ndefAgent = NDEFAgent;
     	ndefLog_func("main: " + ndefAgent.objectPath + " successfully registered for tag type : " + ndefAgent.tagType);
     }
     
     function NdefAgentRegisteredErrorCB(error) {
-    	ndefLog_func("main: <b> >> " + getError(error) + "</b>");
+    	ndefLog_func("main: <b> >> " + cloudeebus.getError(error) + "</b>");
     }
     
     function parsingFunc(mimeType, rawData, rawDataEscaped, rawDataLen) {
@@ -197,7 +186,7 @@
     }
     
     function NdefAgentUnregisterErrorCB(error) {
-    	ndefLog_func("main: <b>>> " + getError(error) + "</b><br>");
+    	ndefLog_func("main: <b>>> " + cloudeebus.getError(error) + "</b><br>");
     }
     
     function unregisterNDEFAgent(tagType) {
@@ -209,7 +198,7 @@
     }
     
     function serviceReleaseErrorCB(error) {
-    	ndefLog_func("main: serviceReleaseErrorCB: <b>" + getError(error) + "</b>");
+    	ndefLog_func("main: serviceReleaseErrorCB: <b>" + cloudeebus.getError(error) + "</b>");
     }
     
     function unregisterService() {

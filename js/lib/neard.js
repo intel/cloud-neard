@@ -66,7 +66,7 @@ neardService.registerNdefAgent = function(tagType, parsingFunc) {
 		var ndefAgent = null;
 
 		function errorCB(error) {
-			resolver.reject(error, true);
+			resolver.reject(cloudeebus.getError(error), true);
 		}
 
 		function NeardNDEFAgentUnregisteredSuccessCB() {
@@ -231,8 +231,7 @@ neardService.unregisterService = function() {
 		}
 
 		function onErrorCB(error) {
-			errorStr = error.desc + " : " + error.uri;
-			resolver.reject(errorStr, true);
+			resolver.reject(cloudeebus.getError(error), true);
 		}
 
 		// Release all NDEF agents

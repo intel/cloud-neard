@@ -44,6 +44,17 @@ cloudeebus.reset = function() {
 cloudeebus.log = function(msg) { 
 };
 
+cloudeebus.getError = function(error) {
+	if (error.desc && error.uri)
+		return error.desc + " : " + error.uri;
+	if (error.desc)
+		return error.desc;
+	if (error.uri)
+		return error.uri;
+	if (error.message)
+		return error.message;
+	return error;
+};
 
 cloudeebus.versionCheck = function(version) {
 	var ver = version.split(".");
@@ -76,9 +87,9 @@ cloudeebus.connect = function(uri, manifest, successCB, errorCB) {
 	}
 	
 	function onWAMPSessionAuthErrorCB(error) {
-		cloudeebus.log("Authentication error: " + error.desc);
+		cloudeebus.log("Authentication error: " + cloudeebus.getError(error));
 		if (errorCB)
-			errorCB(error.desc);
+			errorCB(cloudeebus.getError(error));
 	}
 	
 	function onWAMPSessionAuthenticatedCB(permissions) {
@@ -233,8 +244,8 @@ cloudeebus.Service.prototype.add = function(promise) {
 	}
 	
 	function ServiceAddedErrorCB(error) {
-		cloudeebus.log("Error adding service method: " + self.name + ", error: " + error.desc);
-		self.promise.resolver.reject(error.desc, true);
+		cloudeebus.log("Error adding service method: " + self.name + ", error: " + cloudeebus.getError(error));
+		self.promise.resolver.reject(cloudeebus.getError(error), true);
 	}
 
 	var arglist = [
@@ -458,6 +469,7 @@ cloudeebus.Service.prototype._emitSignal = function(objectPath, signalName, resu
 
 	this.wampSession.call("emitSignal", arglist).then(successCB, errorCB);
 };
+
 
 
 /*****************************************************************************/
@@ -1008,8 +1020,8 @@ cloudeebus.ProxyObject.prototype.callMethod = function(ifName, method, args, sig
 		}
 
 		function callMethodErrorCB(error) {
-			cloudeebus.log("Error calling method: " + method + " on object: " + self.objectPath + " : " + error.desc);
-			resolver.reject(error.desc, true);
+			cloudeebus.log("Error calling method: " + method + " on object: " + self.objectPath + " : " + cloudeebus.getError(error));
+			resolver.reject(cloudeebus.getError(error), true);
 		}
 
 		var arglist = [
@@ -1056,9 +1068,9 @@ cloudeebus.ProxyObject.prototype.connectToSignal = function(ifName, signal, hand
 	}
 
 	function connectToSignalErrorCB(error) {
-		cloudeebus.log("Error connecting to signal: " + signal + " on object: " + self.objectPath + " : " + error.desc);
+		cloudeebus.log("Error connecting to signal: " + signal + " on object: " + self.objectPath + " : " + cloudeebus.getError(error));
 		if (errorCB)
-			errorCB(error.desc);
+			errorCB(cloudeebus.getError(error));
 	}
 
 	var arglist = [
