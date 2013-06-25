@@ -33,7 +33,7 @@ NDEFAgent = function(srvDbusName, tagType, jsHdl) {
 	objPath = objPath.replace(/-/g, "_");
 	objPath = "/CloudeebusNdefagent/" + objPath;
 	var specificXml = '<!DOCTYPE node PUBLIC "-//freedesktop//DTD D-BUS Object Introspection 1.0//EN"\n"http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd">\n<node><interface name="org.neard.NDEFAgent"><method name="GetNDEF"><arg name="values" type="a{sv}" direction="in"/></method><method name="Release"></method></interface></node>';	
-	Agent.call(this, srvDbusName, objPath, jsHdl, specificXml);
+	cloudeebus.Agent.call(this, srvDbusName, objPath, jsHdl, specificXml);
 	
 	this.tagType = tagType;
 };
@@ -238,9 +238,11 @@ neardService.unregisterService = function() {
 
 		// Release all NDEF agents
 		for (var tagType in neardService.NDEFagents) {
-			agent = neardService.NDEFagents[tagType];
-			cloudeebus.log(JSON.stringify(agent));
-			neardService.unregisterNdefAgent(tagType);
+			if (tagType != null) {
+				agent = neardService.NDEFagents[tagType];
+				cloudeebus.log("Removing agent " + agent.objectPath);
+				neardService.unregisterNdefAgent(agent.tagType);
+			}
 		}
 		
 	    neardService.service.remove(onSuccessCB, onErrorCB);				    	  
