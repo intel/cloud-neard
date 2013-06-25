@@ -22,7 +22,8 @@
 	function clearResults() {
 		outLog.innerHTML='';
 		writeLog.innerHTML='';
-		recordContentText.value='';		
+		recordContentText.value='';
+		ndefLog.innerHTML='';
 	}
 
 	// NDEF Message log
