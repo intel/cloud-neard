@@ -240,7 +240,6 @@ neardService.unregisterService = function() {
 		for (var tagType in neardService.NDEFagents) {
 			if (tagType != null) {
 				agent = neardService.NDEFagents[tagType];
-				cloudeebus.log("Removing agent " + agent.objectPath);
 				neardService.unregisterNdefAgent(agent.tagType);
 			}
 		}
