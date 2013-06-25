@@ -123,8 +123,9 @@ neardService.registerNdefAgent = function(tagType, parsingFunc) {
 				resolver.fulfill(result[0], true);
 			}
 			catch (e) {
-				cloudeebus.log("Method callback exception: " + e);
-				resolver.reject(e, true);
+				var errorStr = cloudeebus.getError(e);
+				cloudeebus.log("Method callback exception: " + errorStr);
+				resolver.reject(errorStr, true);
 			}
 		}
 
@@ -172,7 +173,7 @@ neardService.unregisterNdefAgent = function(tagType) {
 		}
 			
 		function errorCB(error) {
-			errorStr = error.desc + " : " + error.uri;
+			errorStr = cloudeebus.getError(error);
 			resolver.reject(errorStr, true);
 		}
 
@@ -225,8 +226,9 @@ neardService.unregisterService = function() {
 				neardService.service = null;
 			}
 			catch (e) {
-				cloudeebus.log("Method callback exception: " + e);
-				resolver.reject(e, true);
+				var errorStr = cloudeebus.getError(e);
+				cloudeebus.log("Method callback exception: " + errorStr);
+				resolver.reject(errorStr, true);
 			}
 		}
 
