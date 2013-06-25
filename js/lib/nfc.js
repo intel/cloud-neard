@@ -47,7 +47,7 @@ nfc._NDEFRecordForProps = function(props) {
 
 nfc._NDEFMessageForRecordIds = function(ids) {
 	
-	var future = new cloudeebus.Future(function (resolver) {
+	var promise = new cloudeebus.Promise(function (resolver) {
 		
 		var records = [];
 		
@@ -64,7 +64,7 @@ nfc._NDEFMessageForRecordIds = function(ids) {
 		}
 	});
 	
-	return future;
+	return promise;
 }
 
 
@@ -87,7 +87,6 @@ nfc._adapterChanged = function(key, value) {
 	
 	function onTagPropsOk(props) {
 		nfc._tag.props = props;
-		nfc._tag.type = props.Type;
 		if (nfc.ontagfound)
 			nfc.ontagfound({type: "tagfound", param: nfc._tag});
 	}
@@ -157,11 +156,11 @@ nfc._adapterChanged = function(key, value) {
 nfc._init = function(uri, manifest) {
 	nfc._reset();
 	
-	var future = new cloudeebus.Future(function (resolver) {
+	var promise = new cloudeebus.Promise(function (resolver) {
 		function onAdapterPropsOk(props) {
 			nfc._adapter.props = props;
 			nfc.polling = props.Polling ? true : false;
-			resolver.accept();
+			resolver.fulfill();
 		}
 		
 		function onAdapterOk() {
@@ -199,7 +198,7 @@ nfc._init = function(uri, manifest) {
 		cloudeebus.connect(uri, manifest, onConnectOk, onerror);
 	});
 	
-	return future;
+	return promise;
 };
 
 
@@ -230,13 +229,13 @@ nfc.NFCPeer = function(proxy) {
 
 
 nfc.NFCPeer.prototype.sendNDEF = function(ndefMessage) {
-	var futures = [];
+	var promises = [];
 	for (var i=0; i< ndefMessage.records.length; i++) {
 		var ndefRecord = ndefMessage.records[i];
 		var rec = ndefRecord.neardRecord();
-		futures.push(this.proxy.callMethod("org.neard.Device", "Push", [rec]));
+		promises.push(this.proxy.callMethod("org.neard.Device", "Push", [rec]));
 	}
-	return cloudeebus.Future.every.apply(cloudeebus.Future,futures);
+	return cloudeebus.Promise.every.apply(cloudeebus.Promise,promises);
 };
 
 
@@ -254,7 +253,6 @@ nfc.NFCPeer.prototype.startHandover = function(type) {
 
 nfc.NFCTag = function(proxy) {
 	this.proxy = proxy;
-	this.type = "GENERIC_TARGET";
 	if (proxy) {
 		this.id = proxy.objectPath;
 	}
@@ -264,7 +262,7 @@ nfc.NFCTag = function(proxy) {
 
 nfc.NFCTag.prototype.readNDEF = function() {
 	if (!this.props)
-		return cloudeebus.Future.reject("Tag properties unknown.");
+		return cloudeebus.Promise.reject("Tag properties unknown.");
 	
 	return nfc._NDEFMessageForRecordIds(this.props.Records);
 };
