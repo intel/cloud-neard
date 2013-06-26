@@ -114,7 +114,7 @@ nfc._adapterChanged = function(key, value) {
 				[]).then(onPeerPropsOk);
 		nfc._peer.proxy.connectToSignal("org.neard.Device","PropertyChanged",
 				nfc._peerChanged);
-		}
+	}
 	
 	if (key == "Tags") {
 		if (value.length == 0) {
@@ -126,7 +126,7 @@ nfc._adapterChanged = function(key, value) {
 		else
 			onTagFound(value[0]);
 	}
-	if (key == "Devices") {
+	else if (key == "Devices") {
 		if (value.length == 0) {
 			nfc._peer = null;
 			if (nfc.onpeerlost)
@@ -136,7 +136,7 @@ nfc._adapterChanged = function(key, value) {
 		else
 			onPeerFound(value[0]);
 	}
-	if (key == "Polling") {
+	else if (key == "Polling") {
 		nfc.polling = value;
 		if (value) {
 			if (nfc.onpollstart)
@@ -147,7 +147,7 @@ nfc._adapterChanged = function(key, value) {
 				nfc.onpollstop({type: "pollstop"});
 		}
 	}
-	if (key == "Powered") {
+	else if (key == "Powered") {
 		nfc.powered = value;
 		if (value) {
 			if (nfc.onpoweron)
