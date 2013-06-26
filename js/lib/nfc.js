@@ -78,7 +78,7 @@ nfc._peerChanged = function(key, value) {
 		if (nfc._peer.onmessageread)
 			nfc._NDEFMessageForRecordIds(nfc._peer.props.Records).then(
 					function(msg) {
-						nfc._peer.onmessageread({type: "messageread", param: msg});
+						nfc._peer.onmessageread({type: "messageread", message: msg});
 					});
 	}
 };
@@ -89,13 +89,13 @@ nfc._adapterChanged = function(key, value) {
 	function onTagPropsOk(props) {
 		nfc._tag.props = props;
 		if (nfc.ontagfound)
-			nfc.ontagfound({type: "tagfound", param: nfc._tag});
+			nfc.ontagfound({type: "tagfound", tag: nfc._tag});
 	}
 	
 	function onPeerPropsOk(props) {
 		nfc._peer.props = props;
 		if (nfc.onpeerfound)
-			nfc.onpeerfound({type: "peerfound", param: nfc._peer});
+			nfc.onpeerfound({type: "peerfound", peer: nfc._peer});
 	}
 	
 	function onTagFound(tagId) {
