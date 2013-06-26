@@ -78,7 +78,7 @@ nfc._peerChanged = function(key, value) {
 		if (nfc._peer.onmessageread)
 			nfc._NDEFMessageForRecordIds(nfc._peer.props.Records).then(
 					function(msg) {
-						nfc._peer.onmessageread({type: "messageread", message: msg});
+						nfc._peer.onmessageread.call(nfc._peer, {type: "messageread", message: msg});
 					});
 	}
 };
@@ -89,13 +89,13 @@ nfc._adapterChanged = function(key, value) {
 	function onTagPropsOk(props) {
 		nfc._tag.props = props;
 		if (nfc.ontagfound)
-			nfc.ontagfound({type: "tagfound", tag: nfc._tag});
+			nfc.ontagfound.call(nfc, {type: "tagfound", tag: nfc._tag});
 	}
 	
 	function onPeerPropsOk(props) {
 		nfc._peer.props = props;
 		if (nfc.onpeerfound)
-			nfc.onpeerfound({type: "peerfound", peer: nfc._peer});
+			nfc.onpeerfound.call(nfc, {type: "peerfound", peer: nfc._peer});
 	}
 	
 	function onTagFound(tagId) {
@@ -120,7 +120,7 @@ nfc._adapterChanged = function(key, value) {
 		if (value.length == 0) {
 			nfc._tag = null;
 			if (nfc.ontaglost)
-				nfc.ontaglost({type: "taglost"});
+				nfc.ontaglost.call(nfc, {type: "taglost"});
 			nfc.startPoll();
 		}
 		else
@@ -130,7 +130,7 @@ nfc._adapterChanged = function(key, value) {
 		if (value.length == 0) {
 			nfc._peer = null;
 			if (nfc.onpeerlost)
-				nfc.onpeerlost({type: "peerlost"});
+				nfc.onpeerlost.call(nfc, {type: "peerlost"});
 			nfc.startPoll();
 		}
 		else
@@ -140,22 +140,22 @@ nfc._adapterChanged = function(key, value) {
 		nfc.polling = value;
 		if (value) {
 			if (nfc.onpollstart)
-				nfc.onpollstart({type: "pollstart"});
+				nfc.onpollstart.call(nfc, {type: "pollstart"});
 		}
 		else {
 			if (nfc.onpollstop)
-				nfc.onpollstop({type: "pollstop"});
+				nfc.onpollstop.call(nfc, {type: "pollstop"});
 		}
 	}
 	else if (key == "Powered") {
 		nfc.powered = value;
 		if (value) {
 			if (nfc.onpoweron)
-				nfc.onpoweron({type: "poweron"});
+				nfc.onpoweron.call(nfc, {type: "poweron"});
 		}
 		else {
 			if (nfc.onpoweroff)
-				nfc.onpoweroff({type: "poweroff"});
+				nfc.onpoweroff.call(nfc, {type: "poweroff"});
 		}
 	}
 	
