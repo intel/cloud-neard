@@ -29,6 +29,7 @@ nfc._reset = function() {
 	nfc._tag = null;
 	nfc._peer = null;
 	nfc.polling = false;
+	nfc.powered = false;
 };
 
 
@@ -146,6 +147,17 @@ nfc._adapterChanged = function(key, value) {
 				nfc.onpollstop({type: "pollstop"});
 		}
 	}
+	if (key == "Powered") {
+		nfc.powered = value;
+		if (value) {
+			if (nfc.onpoweron)
+				nfc.onpoweron({type: "poweron"});
+		}
+		else {
+			if (nfc.onpoweroff)
+				nfc.onpoweroff({type: "poweroff"});
+		}
+	}
 	
 };
 
@@ -160,6 +172,7 @@ nfc._init = function(uri, manifest) {
 		function onAdapterPropsOk(props) {
 			nfc._adapter.props = props;
 			nfc.polling = props.Polling ? true : false;
+			nfc.powered = props.Powered ? true : false;
 			resolver.fulfill();
 		}
 		
@@ -199,6 +212,19 @@ nfc._init = function(uri, manifest) {
 	});
 	
 	return promise;
+};
+
+
+
+/*****************************************************************************/
+
+nfc.powerOn = function() {
+	return nfc._adapter.SetProperty("Powered", 1).then(function(){nfc.powered=true;});
+};
+
+
+nfc.powerOff = function() {
+	return nfc._adapter.SetProperty("Powered", 0).then(function(){nfc.powered=false;});
 };
 
 
