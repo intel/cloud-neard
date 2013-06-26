@@ -29,6 +29,7 @@ nfc._reset = function() {
 	nfc._tag = null;
 	nfc._peer = null;
 	nfc.polling = false;
+	nfc.powered = false;
 };
 
 
@@ -77,7 +78,7 @@ nfc._peerChanged = function(key, value) {
 		if (nfc._peer.onmessageread)
 			nfc._NDEFMessageForRecordIds(nfc._peer.props.Records).then(
 					function(msg) {
-						nfc._peer.onmessageread({type: "messageread", param: msg});
+						nfc._peer.onmessageread.call(nfc._peer, {type: "messageread", message: msg});
 					});
 	}
 };
@@ -88,13 +89,13 @@ nfc._adapterChanged = function(key, value) {
 	function onTagPropsOk(props) {
 		nfc._tag.props = props;
 		if (nfc.ontagfound)
-			nfc.ontagfound({type: "tagfound", param: nfc._tag});
+			nfc.ontagfound.call(nfc, {type: "tagfound", tag: nfc._tag});
 	}
 	
 	function onPeerPropsOk(props) {
 		nfc._peer.props = props;
 		if (nfc.onpeerfound)
-			nfc.onpeerfound({type: "peerfound", param: nfc._peer});
+			nfc.onpeerfound.call(nfc, {type: "peerfound", peer: nfc._peer});
 	}
 	
 	function onTagFound(tagId) {
@@ -113,37 +114,48 @@ nfc._adapterChanged = function(key, value) {
 				[]).then(onPeerPropsOk);
 		nfc._peer.proxy.connectToSignal("org.neard.Device","PropertyChanged",
 				nfc._peerChanged);
-		}
+	}
 	
 	if (key == "Tags") {
 		if (value.length == 0) {
 			nfc._tag = null;
 			if (nfc.ontaglost)
-				nfc.ontaglost({type: "taglost"});
+				nfc.ontaglost.call(nfc, {type: "taglost"});
 			nfc.startPoll();
 		}
 		else
 			onTagFound(value[0]);
 	}
-	if (key == "Devices") {
+	else if (key == "Devices") {
 		if (value.length == 0) {
 			nfc._peer = null;
 			if (nfc.onpeerlost)
-				nfc.onpeerlost({type: "peerlost"});
+				nfc.onpeerlost.call(nfc, {type: "peerlost"});
 			nfc.startPoll();
 		}
 		else
 			onPeerFound(value[0]);
 	}
-	if (key == "Polling") {
+	else if (key == "Polling") {
 		nfc.polling = value;
 		if (value) {
 			if (nfc.onpollstart)
-				nfc.onpollstart({type: "pollstart"});
+				nfc.onpollstart.call(nfc, {type: "pollstart"});
 		}
 		else {
 			if (nfc.onpollstop)
-				nfc.onpollstop({type: "pollstop"});
+				nfc.onpollstop.call(nfc, {type: "pollstop"});
+		}
+	}
+	else if (key == "Powered") {
+		nfc.powered = value;
+		if (value) {
+			if (nfc.onpoweron)
+				nfc.onpoweron.call(nfc, {type: "poweron"});
+		}
+		else {
+			if (nfc.onpoweroff)
+				nfc.onpoweroff.call(nfc, {type: "poweroff"});
 		}
 	}
 	
@@ -160,6 +172,7 @@ nfc._init = function(uri, manifest) {
 		function onAdapterPropsOk(props) {
 			nfc._adapter.props = props;
 			nfc.polling = props.Polling ? true : false;
+			nfc.powered = props.Powered ? true : false;
 			resolver.fulfill();
 		}
 		
@@ -199,6 +212,19 @@ nfc._init = function(uri, manifest) {
 	});
 	
 	return promise;
+};
+
+
+
+/*****************************************************************************/
+
+nfc.powerOn = function() {
+	return nfc._adapter.SetProperty("Powered", 1).then(function(){nfc.powered=true;});
+};
+
+
+nfc.powerOff = function() {
+	return nfc._adapter.SetProperty("Powered", 0).then(function(){nfc.powered=false;});
 };
 
 

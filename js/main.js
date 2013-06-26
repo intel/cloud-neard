@@ -53,7 +53,7 @@
     function peerOnAttach(peer) {
 		outLog.innerHTML += "<br><b>Peer detected</b><br>";
 		peer.onmessageread = function(event) {
-			logMessage(event.param);
+			logMessage(event.message);
 		};
 	}
 
@@ -61,13 +61,13 @@
 	function nfcListen(enabled) {
 		if (enabled) {
 			nfc.ontagfound = function(event) {
-				readOnAttach(event.param);
+				readOnAttach(event.tag);
 			};
 			nfc.ontaglost = function(event) {
 				outLog.innerHTML += "<br><b>Tag detached</b><hr>";
 			};
 			nfc.onpeerfound = function(event) {
-				peerOnAttach(event.param);
+				peerOnAttach(event.peer);
 			};
 			nfc.onpeerlost = function(event) {
 				outLog.innerHTML += "<br><b>Peer detached</b><hr>";
@@ -128,11 +128,11 @@
 
     function writeMessage() {
 		nfc.ontagfound = function(event) {
-			tagWriteOnAttach(event.param);
+			tagWriteOnAttach(event.tag);
 		};
 		nfc.ontaglost = writeOnDetach;
 		nfc.onpeerfound = function(event) {
-			peerWriteOnAttach(event.param);
+			peerWriteOnAttach(event.peer);
 		};
 		nfc.onpeerlost = writeOnDetach;
 		nfc.startPoll();
