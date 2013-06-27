@@ -104,13 +104,7 @@ neardService.registerNdefAgent = function(tagType, parsingFunc) {
 			        				rawDataAsString.length);
                     }, 
 			        Release: function() {			        	
-			        	cloudeebus.log("NdefAgentHandler().Release()");
-			        	if (1) { // until fixed (Neard side)
-							if (neardService.NDEFagents[ndefAgent.tagType] != null) {
-					        	neardService.service.delAgent(ndefAgent, onAgentRemoved, errorCB);
-							}
-			        	} else
-			        		nfc._manager.UnregisterNDEFAgent(ndefAgent.objectPath, ndefAgent.tagType).then(NeardNDEFAgentUnregisteredSuccessCB);
+			        	neardService.service.delAgent(ndefAgent).then(onAgentRemoved, errorCB);
 			        },
 			    },
             }
@@ -139,7 +133,7 @@ neardService.registerNdefAgent = function(tagType, parsingFunc) {
 
 		function onServiceAdded_addAgent(service) {
 			neardService.service = service;
-			service.addAgent(ndefAgent, onAgentAdded, errorCB);
+			service.addAgent(ndefAgent).then(onAgentAdded, errorCB);
 		}
 
 		
@@ -149,7 +143,7 @@ neardService.registerNdefAgent = function(tagType, parsingFunc) {
 			nfc._bus.addService(neardService.name).then(onServiceAdded_addAgent);
 		} else {
 			// Adding directly agent if service already exist
-			neardService.service.addAgent(ndefAgent, onAgentAdded, errorCB);
+			neardService.service.addAgent(ndefAgent).then(onAgentAdded, errorCB);
 		}
 	});
 	
@@ -200,7 +194,7 @@ neardService.unregisterNdefAgent = function(tagType) {
 		function onNDEFAgentUnregistered(objectPath) {
 			// Remove agent from service
 			if ((ndefAgent.tagType in neardService.NDEFagents) == true)
-				neardService.service.delAgent(ndefAgent, onAgentRemoved, errorCB);
+				neardService.service.delAgent(ndefAgent).then(onAgentRemoved, errorCB);
 		}
 
 		if (neardService.NDEFagents[ndefAgent.tagType])
