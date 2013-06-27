@@ -104,7 +104,7 @@ neardService.registerNdefAgent = function(tagType, parsingFunc) {
 			        				rawDataAsString.length);
                     }, 
 			        Release: function() {			        	
-			        	neardService.service.delAgent(ndefAgent).then(onAgentRemoved, errorCB);
+			        	neardService.service.removeAgent(ndefAgent).then(onAgentRemoved, errorCB);
 			        },
 			    },
             }
@@ -194,7 +194,7 @@ neardService.unregisterNdefAgent = function(tagType) {
 		function onNDEFAgentUnregistered(objectPath) {
 			// Remove agent from service
 			if ((ndefAgent.tagType in neardService.NDEFagents) == true)
-				neardService.service.delAgent(ndefAgent).then(onAgentRemoved, errorCB);
+				neardService.service.removeAgent(ndefAgent).then(onAgentRemoved, errorCB);
 		}
 
 		if (neardService.NDEFagents[ndefAgent.tagType])
