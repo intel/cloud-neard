@@ -84,7 +84,7 @@ neardService.registerNdefAgent = function(tagType, parsingFunc) {
 			var errorStr = "Agent : " + objectPath + " removed!";
 			resolver.fulfill(errorStr, true);
     	    if (neardService.NDEFagentSize <= 0) {
-	    	    neardService.service.remove(null, errorCB);				    	  
+	    	    neardService.service.remove().catch(errorCB);				    	  
   	        }
 		}
 
@@ -193,7 +193,7 @@ neardService.unregisterNdefAgent = function(tagType) {
 			var errorStr = "Agent : " + objectPath + " removed!";
 			resolver.fulfill(errorStr, true);
     	    if (neardService.NDEFagentSize <= 0) {
-	    	    neardService.service.remove(onServiceRemoved, errorCB);				    	  
+	    	    neardService.service.remove().then(onServiceRemoved, errorCB);				    	  
   	        }
 		}
 
@@ -244,7 +244,7 @@ neardService.unregisterService = function() {
 			}
 		}
 		
-	    neardService.service.remove(onSuccessCB, onErrorCB);				    	  
+	    neardService.service.remove().then(onSuccessCB, onErrorCB);				    	  
 	});
 	
 	return promise;
