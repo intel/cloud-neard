@@ -204,8 +204,8 @@ nfc._init = function(uri, manifest) {
 		}
 		
 		function onerror(error) {
-			cloudeebus.log("NFC init error: " + error.desc);
-			resolver.reject(error.desc, true);			
+			cloudeebus.log("NFC init error: " + error);
+			resolver.reject(error, true);			
 		}
 		
 		cloudeebus.connect(uri, manifest, onConnectOk, onerror);
