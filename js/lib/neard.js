@@ -35,6 +35,7 @@ NDEFAgent = function(srvDbusName, tagType, jsHdl) {
 	var specificXml = '<!DOCTYPE node PUBLIC "-//freedesktop//DTD D-BUS Object Introspection 1.0//EN"\n"http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd">\n<node><interface name="org.neard.NDEFAgent"><method name="GetNDEF"><arg name="values" type="a{sv}" direction="in"/></method><method name="Release"></method></interface></node>';	
 	cloudeebus.Agent.call(this, srvDbusName, objPath, jsHdl, specificXml);
 	
+	this.registered = false;
 	this.tagType = tagType;
 };
 
@@ -75,9 +76,8 @@ neardService.registerNdefAgent = function(tagType, parsingFunc) {
   	        }
 		
 		function onAgentRemoved(objectPath) {
-			neardService.NDEFagents[ndefAgent.tagType].registered = false;
 			if (neardService.NDEFagents[ndefAgent.tagType] != null) {
-				delete neardService.NDEFagents[ndefAgent.tagType];
+				neardService.NDEFagents[ndefAgent.tagType] = null;
 				neardService.NDEFagentSize--;
 			}
 			var errorStr = "Agent : " + objectPath + " removed!";
@@ -122,8 +122,6 @@ neardService.registerNdefAgent = function(tagType, parsingFunc) {
 		}
 
 		function onAgentAdded() {
-			if (neardService.NDEFagents[ndefAgent.tagType] != null)
-				delete neardService.NDEFagents[ndefAgent.tagType];
 			neardService.NDEFagents[ndefAgent.tagType] = ndefAgent;
 			neardService.NDEFagentSize++;
 			nfc._manager.RegisterNDEFAgent(ndefAgent.objectPath, ndefAgent.tagType).then(NeardNDEFAgentRegisteredSuccessCB, errorCB);
@@ -174,11 +172,10 @@ neardService.unregisterNdefAgent = function(tagType) {
 		}
 
 		function onAgentRemoved(agent) {
-			agent.registered = false;
 			var errorStr = "Agent : " + agent.objectPath + " removed!";
 			resolver.fulfill(errorStr, true);
 			if (neardService.NDEFagents[agent.tagType] != null) {
-				delete neardService.NDEFagents[agent.tagType];
+				neardService.NDEFagents[agent.tagType] = null;
 				neardService.NDEFagentSize--;
 			}
     	    if (neardService.NDEFagentSize <= 0)
@@ -186,6 +183,7 @@ neardService.unregisterNdefAgent = function(tagType) {
 		}
 
 		function onNDEFAgentUnregistered(objectPath) {
+			ndefAgent.registered = false;
 			// Remove agent from service
 			if ((ndefAgent.tagType in neardService.NDEFagents) == true)
 				neardService.service.removeAgent(ndefAgent).then(onAgentRemoved, errorCB);
