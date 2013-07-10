@@ -214,7 +214,6 @@ cloudeebus.BusConnection.prototype.addService = function(serviceName) {
 //xml : the xml which describe interface/methods/signals...
 cloudeebus.Agent = function(srvDbusName, objPath, jsHdl, xml) {
 	this.srvName = srvDbusName;
-	this.registered = false;
 	this.xml = xml;
 	this.objectPath = objPath;
 	this.jsHdl = jsHdl;
@@ -348,8 +347,8 @@ cloudeebus.Service.prototype._createWrapper = function(agent) {
 	var parser = new DOMParser();
 	var xmlDoc = parser.parseFromString(agent.xml, "text/xml");
 	var ifXml = xmlDoc.getElementsByTagName("interface");
-	agent.jsHdl.wrapperFunc = [];
-	agent.jsHdl.methodId = [];
+	agent.jsHdl.wrapperFunc = {};
+	agent.jsHdl.methodId = {};
 	agent.jsHdl.methodId[agent.objectPath] = [];
 	for (var i=0; i < ifXml.length; i++) {
 		var ifName = ifXml[i].attributes.getNamedItem("name").value;
@@ -376,7 +375,6 @@ cloudeebus.Service.prototype.addAgent = function(agent) {
 		function ServiceAddAgentSuccessCB(objPath) {
 			try { // calling dbus hook object function for un-translated types
 				self.agents.push(agent);
-				agent.registered = true;
 				resolver.fulfill(objPath, true);
 			}
 			catch (e) {
@@ -418,17 +416,15 @@ cloudeebus.Service.prototype.addAgent = function(agent) {
 cloudeebus.Service.prototype._deleteWrapper = function(agent) {
 	var objJs = agent.jsHdl;
 	if (objJs.methodId[agent.objectPath]) {
-		for (var idx in objJs.methodId[agent.objectPath]) {
+		while (objJs.methodId[agent.objectPath].length) {
 			try {
-				cloudeebus.log("unsubscribe " + objJs.methodId[agent.objectPath][idx]);
-				this.wampSession.unsubscribe(objJs.methodId[agent.objectPath][idx]);
-				objJs.methodId[agent.objectPath][idx] = null;
+				this.wampSession.unsubscribe( objJs.methodId[agent.objectPath].pop() );
 			}
 			catch (e) {
 				cloudeebus.log("Unsubscribe error: " + cloudeebus.getError(e));
 			}
 		}
-		delete objJs.methodId[agent.objectPath];
+		objJs.methodId[agent.objectPath] = null;
 	}
 };
 
@@ -439,8 +435,7 @@ cloudeebus.Service.prototype.removeAgent = function(rmAgent) {
 	var promise = new cloudeebus.Promise(function (resolver) {
 		function ServiceRemoveAgentSuccessCB(objectPath) {
 			// Searching agent in list
-			var idx;
-			for (idx in self.agents)
+			for (var idx in self.agents)
 				if (self.agents[idx].objectPath == objectPath) {
 					agent = self.agents[idx];
 					break;
