@@ -70,10 +70,9 @@ neardService.registerNdefAgent = function(tagType, parsingFunc) {
 		}
 
 		function NeardNDEFAgentUnregisteredSuccessCB() {
-    	    if (neardService.NDEFagentSize <= 0) {
+    	    if (neardService.NDEFagentSize <= 0)
 	    	    neardService.service.remove();				    	  
   	        }
-		}
 		
 		function onAgentRemoved(objectPath) {
 			neardService.NDEFagents[ndefAgent.tagType].registered = false;
@@ -83,9 +82,8 @@ neardService.registerNdefAgent = function(tagType, parsingFunc) {
 			}
 			var errorStr = "Agent : " + objectPath + " removed!";
 			resolver.fulfill(errorStr, true);
-    	    if (neardService.NDEFagentSize <= 0) {
+    	    if (neardService.NDEFagentSize <= 0)
 	    	    neardService.service.remove(null, errorCB);				    	  
-  	        }
 		}
 
 		
@@ -104,23 +102,17 @@ neardService.registerNdefAgent = function(tagType, parsingFunc) {
 			        				rawDataAsString.length);
                     }, 
 			        Release: function() {			        	
-			        	cloudeebus.log("NdefAgentHandler().Release()");
-			        	if (1) { // until fixed (Neard side)
-							if (neardService.NDEFagents[ndefAgent.tagType] != null) {
-					        	neardService.service.delAgent(ndefAgent, onAgentRemoved, errorCB);
-							}
-			        	} else
-			        		nfc._manager.UnregisterNDEFAgent(ndefAgent.objectPath, ndefAgent.tagType).then(NeardNDEFAgentUnregisteredSuccessCB);
+						if (neardService.NDEFagents[ndefAgent.tagType] != null)
+					        neardService.service.removeAgent(ndefAgent).then(onAgentRemoved, errorCB);
 			        },
-			    },
-            }
+			    }
+			}
         };
-		
+
 		function NeardNDEFAgentRegisteredSuccessCB() {
 			try {
-				var result = [ndefAgent];
 				ndefAgent.registered = true;
-				resolver.fulfill(result[0], true);
+				resolver.fulfill(ndefAgent, true);
 			}
 			catch (e) {
 				var errorStr = cloudeebus.getError(e);
@@ -139,18 +131,17 @@ neardService.registerNdefAgent = function(tagType, parsingFunc) {
 
 		function onServiceAdded_addAgent(service) {
 			neardService.service = service;
-			service.addAgent(ndefAgent, onAgentAdded, errorCB);
+			service.addAgent(ndefAgent).then(onAgentAdded, errorCB);
 		}
 
 		
 		var ndefAgent = new NDEFAgent(neardService.name, tagType, NdefAgentHandler);
 		// Create service if needed
-		if (!neardService.service) {			
+		if (!neardService.service)			
 			nfc._bus.addService(neardService.name).then(onServiceAdded_addAgent);
-		} else {
+		else
 			// Adding directly agent if service already exist
-			neardService.service.addAgent(ndefAgent, onAgentAdded, errorCB);
-		}
+			neardService.service.addAgent(ndefAgent).then(onAgentAdded, errorCB);
 	});
 	
 	return promise;
@@ -173,34 +164,31 @@ neardService.unregisterNdefAgent = function(tagType) {
 		}
 			
 		function errorCB(error) {
-			errorStr = cloudeebus.getError(error);
-			resolver.reject(errorStr, true);
+			resolver.reject(cloudeebus.getError(error), true);
 		}
 
 		function onServiceRemoved(serviceName) {
 			neardService.service = null;
 			var errorStr = "Service : " + serviceName + " removed!";
-			resolver.fulfill(errorStr, true);
+			cloudeebus.log(errorStr);
 		}
 
-		function onAgentRemoved(objectPath) {
-			neardService.NDEFagents[ndefAgent.tagType].registered = false;
-			if (neardService.NDEFagents[ndefAgent.tagType] != null) {
-				delete neardService.NDEFagents[ndefAgent.tagType];
-				neardService.NDEFagents[ndefAgent.tagType] = null;
+		function onAgentRemoved(agent) {
+			agent.registered = false;
+			var errorStr = "Agent : " + agent.objectPath + " removed!";
+			resolver.fulfill(errorStr, true);
+			if (neardService.NDEFagents[agent.tagType] != null) {
+				delete neardService.NDEFagents[agent.tagType];
 				neardService.NDEFagentSize--;
 			}
-			var errorStr = "Agent : " + objectPath + " removed!";
-			resolver.fulfill(errorStr, true);
-    	    if (neardService.NDEFagentSize <= 0) {
-	    	    neardService.service.remove(onServiceRemoved, errorCB);				    	  
-  	        }
+    	    if (neardService.NDEFagentSize <= 0)
+	    	    neardService.service.remove().then(onServiceRemoved, errorCB);				    	  
 		}
 
 		function onNDEFAgentUnregistered(objectPath) {
 			// Remove agent from service
 			if ((ndefAgent.tagType in neardService.NDEFagents) == true)
-				neardService.service.delAgent(ndefAgent, onAgentRemoved, errorCB);
+				neardService.service.removeAgent(ndefAgent).then(onAgentRemoved, errorCB);
 		}
 
 		if (neardService.NDEFagents[ndefAgent.tagType])
@@ -221,8 +209,7 @@ neardService.unregisterService = function() {
 		
 		function onSuccessCB(serviceName) {
 			try {
-				var result = [neardService.service];
-				resolver.fulfill(result[0], true);
+				resolver.fulfill(neardService.service, true);
 				neardService.service = null;
 			}
 			catch (e) {
