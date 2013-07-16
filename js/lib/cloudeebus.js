@@ -248,8 +248,7 @@ cloudeebus.Service.prototype.remove = function() {
 		
 		function ServiceRemovedErrorCB(error) {
 			var errorStr = cloudeebus.getError(error);
-			cloudeebus.log("Error removing service : " + self.name + ", error: " + errorStr);
-			self.promise.resolver.reject(errorStr, true);
+			resolver.reject(errorStr, true);
 		}
 		
 		for (var idx in self.agents) {
@@ -456,7 +455,7 @@ cloudeebus.Service.prototype.removeAgent = function(rmAgent) {
 		function ServiceRemoveAgentErrorCB(error) {
 			var errorStr = cloudeebus.getError(error);
 			cloudeebus.log("Error removing agent : " + rmAgent.objectPath + ", error: " + errorStr);
-			self.promise.resolver.reject(errorStr, true);
+			resolver.reject(errorStr, true);
 		}
 
 		var arglist = [
