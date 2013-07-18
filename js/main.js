@@ -15,6 +15,15 @@
 		nfc.onpollstop = function(event) {
 			document.tagManagement.tagListener.selectedIndex=0;
 		};
+		nfc.onpoweron = function(event) {
+			outLog.innerHTML +=  "<b>adapter power on</b><br>";
+		};
+		nfc.onpoweroff = function(event) {
+			outLog.innerHTML +=  "<b>adapter power off</b><br>";
+		};
+		
+		// Set adapter power on 
+		nfc.powerOn();
 		// initial state with tag reading disabled
 		nfcListen(false);
 	}
