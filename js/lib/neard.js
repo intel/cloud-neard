@@ -83,7 +83,7 @@ neardService.registerNdefAgent = function(tagType, parsingFunc) {
 			var errorStr = "Agent : " + objectPath + " removed!";
 			resolver.fulfill(errorStr, true);
     	    if (neardService.NDEFagentSize <= 0)
-	    	    neardService.service.remove(null, errorCB);				    	  
+	    	    neardService.service.remove().catch(errorCB);				    	  
 		}
 
 		
@@ -204,11 +204,14 @@ neardService.unregisterService = function() {
 	cloudeebus.log = ndefLog_func;
 
 	var promise = new cloudeebus.Promise(function (resolver) {
+		var current_agent = null;
 		
 		function onSuccessCB(serviceName) {
 			try {
 				resolver.fulfill(neardService.service, true);
 				neardService.service = null;
+				neardService.NDEFagentSize = 0;
+				neardService.NDEFagents = {};
 			}
 			catch (e) {
 				var errorStr = cloudeebus.getError(e);
@@ -217,19 +220,28 @@ neardService.unregisterService = function() {
 			}
 		}
 
+		function onAgentsRemoved(promise) {
+			neardService.service.remove().then(onSuccessCB, onErrorCB);				    	  
+		}
+			
 		function onErrorCB(error) {
 			resolver.reject(cloudeebus.getError(error), true);
 		}
 
 		// Release all NDEF agents
+		var promises = [];
 		for (var tagType in neardService.NDEFagents) {
 			if (tagType != null) {
-				agent = neardService.NDEFagents[tagType];
-				neardService.unregisterNdefAgent(agent.tagType);
+				current_agent = neardService.NDEFagents[tagType];
+				// Unregister agent from Neard
+				if (current_agent) {
+					promises.push(neardService.unregisterNdefAgent(current_agent.tagType));
+					cloudeebus.Promise.every.apply(neardService, promises).then(onAgentsRemoved, onErrorCB);
+				} else  
+				    cloudeebus.Service.remove.apply(neardService).then(onSuccessCB, onErrorCB);
 			}
 		}
 		
-	    neardService.service.remove(onSuccessCB, onErrorCB);				    	  
 	});
 	
 	return promise;
