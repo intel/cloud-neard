@@ -181,9 +181,8 @@
     	neardService.registerNdefAgent(tagType, parsingFunc).then(NdefAgentRegisteredSuccessCB, NdefAgentRegisteredErrorCB);
     }
     
-    function NdefAgentUnregisterSuccessCB() {
-    	ndefLog_func("main: " + ndefAgent.objectPath + " successfully unregistered for tag type : " + ndefAgent.tagType );
-    	ndefAgent = null;
+    function NdefAgentUnregisterSuccessCB(agent) {
+    	ndefLog_func("main: " + agent.objectPath + " successfully unregistered for tag type : " + agent.tagType );
     }
     
     function NdefAgentUnregisterErrorCB(error) {
