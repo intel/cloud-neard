@@ -15,6 +15,15 @@
 		nfc.onpollstop = function(event) {
 			document.tagManagement.tagListener.selectedIndex=0;
 		};
+		nfc.onpoweron = function(event) {
+			outLog.innerHTML +=  "<b>adapter power on</b><br>";
+		};
+		nfc.onpoweroff = function(event) {
+			outLog.innerHTML +=  "<b>adapter power off</b><br>";
+		};
+		
+		// Set adapter power on 
+		nfc.powerOn();
 		// initial state with tag reading disabled
 		nfcListen(false);
 	}
@@ -181,9 +190,8 @@
     	neardService.registerNdefAgent(tagType, parsingFunc).then(NdefAgentRegisteredSuccessCB, NdefAgentRegisteredErrorCB);
     }
     
-    function NdefAgentUnregisterSuccessCB() {
-    	ndefLog_func("main: " + ndefAgent.objectPath + " successfully unregistered for tag type : " + ndefAgent.tagType );
-    	ndefAgent = null;
+    function NdefAgentUnregisterSuccessCB(agent) {
+    	ndefLog_func("main: " + agent.objectPath + " successfully unregistered for tag type : " + agent.tagType );
     }
     
     function NdefAgentUnregisterErrorCB(error) {
