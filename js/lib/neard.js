@@ -109,15 +109,8 @@ neardService.registerNdefAgent = function(tagType, parsingFunc) {
 		var ndefAgent = new NDEFAgent(neardService.name, tagType, NdefAgentHandler);
 
 		function NeardNDEFAgentRegisteredSuccessCB() {
-			try {
-				ndefAgent.registered = true;
-				resolver.fulfill(ndefAgent, true);
-			}
-			catch (e) {
-				var errorStr = cloudeebus.getError(e);
-				cloudeebus.log("Method callback exception: " + errorStr);
-				resolver.reject(errorStr, true);
-			}
+			ndefAgent.registered = true;
+			resolver.fulfill(ndefAgent, true);
 		}
 
 		function onAgentAdded() {
@@ -200,17 +193,10 @@ neardService.unregisterService = function() {
 		var current_agent = null;
 		
 		function onSuccessCB(serviceName) {
-			try {
-				resolver.fulfill(neardService.service, true);
-				neardService.service = null;
-				neardService.NDEFagentSize = 0;
-				neardService.NDEFagents = {};
-			}
-			catch (e) {
-				var errorStr = cloudeebus.getError(e);
-				cloudeebus.log("Method callback exception: " + errorStr);
-				resolver.reject(errorStr, true);
-			}
+			resolver.fulfill(neardService.service, true);
+			neardService.service = null;
+			neardService.NDEFagentSize = 0;
+			neardService.NDEFagents = {};
 		}
 
 		function onAgentsRemoved(promise) {
