@@ -200,7 +200,8 @@ neardService.unregisterService = function() {
 		}
 
 		function onAgentsRemoved(promise) {
-			neardService.service.remove().then(onSuccessCB, onErrorCB);				    	  
+			if (neardService.service != null)
+				neardService.service.remove().then(onSuccessCB, onErrorCB);				    	  
 		}
 			
 		function onErrorCB(error) {
