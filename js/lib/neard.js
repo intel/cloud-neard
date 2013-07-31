@@ -28,12 +28,12 @@ var neardService = {
 /*****************************************************************************/
 
 // creation of an agent specific for NDEF
-NDEFAgent = function(srvDbusName, tagType, jsHdl) {
+NDEFAgent = function(tagType, jsHdl) {
 	var objPath = tagType.replace(/:/g, "");
 	objPath = objPath.replace(/-/g, "_");
 	objPath = "/CloudeebusNdefagent/" + objPath;
 	var specificXml = '<!DOCTYPE node PUBLIC "-//freedesktop//DTD D-BUS Object Introspection 1.0//EN"\n"http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd">\n<node><interface name="org.neard.NDEFAgent"><method name="GetNDEF"><arg name="values" type="a{sv}" direction="in"/></method><method name="Release"></method></interface></node>';	
-	cloudeebus.Agent.call(this, srvDbusName, objPath, jsHdl, specificXml);
+	cloudeebus.Agent.call(this, objPath, jsHdl, specificXml);
 	
 	this.registered = false;
 	this.tagType = tagType;
@@ -106,18 +106,11 @@ neardService.registerNdefAgent = function(tagType, parsingFunc) {
 			    }
 			}
         };
-		var ndefAgent = new NDEFAgent(neardService.name, tagType, NdefAgentHandler);
+		var ndefAgent = new NDEFAgent(tagType, NdefAgentHandler);
 
 		function NeardNDEFAgentRegisteredSuccessCB() {
-			try {
-				ndefAgent.registered = true;
-				resolver.fulfill(ndefAgent, true);
-			}
-			catch (e) {
-				var errorStr = cloudeebus.getError(e);
-				cloudeebus.log("Method callback exception: " + errorStr);
-				resolver.reject(errorStr, true);
-			}
+			ndefAgent.registered = true;
+			resolver.fulfill(ndefAgent, true);
 		}
 
 		function onAgentAdded() {
@@ -200,21 +193,15 @@ neardService.unregisterService = function() {
 		var current_agent = null;
 		
 		function onSuccessCB(serviceName) {
-			try {
-				resolver.fulfill(neardService.service, true);
-				neardService.service = null;
-				neardService.NDEFagentSize = 0;
-				neardService.NDEFagents = {};
-			}
-			catch (e) {
-				var errorStr = cloudeebus.getError(e);
-				cloudeebus.log("Method callback exception: " + errorStr);
-				resolver.reject(errorStr, true);
-			}
+			resolver.fulfill(neardService.service, true);
+			neardService.service = null;
+			neardService.NDEFagentSize = 0;
+			neardService.NDEFagents = {};
 		}
 
 		function onAgentsRemoved(promise) {
-			neardService.service.remove().then(onSuccessCB, onErrorCB);				    	  
+			if (neardService.service != null)
+				neardService.service.remove().then(onSuccessCB, onErrorCB);				    	  
 		}
 			
 		function onErrorCB(error) {
