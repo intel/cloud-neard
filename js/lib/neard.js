@@ -28,12 +28,12 @@ var neardService = {
 /*****************************************************************************/
 
 // creation of an agent specific for NDEF
-NDEFAgent = function(srvDbusName, tagType, jsHdl) {
+NDEFAgent = function(tagType, jsHdl) {
 	var objPath = tagType.replace(/:/g, "");
 	objPath = objPath.replace(/-/g, "_");
 	objPath = "/CloudeebusNdefagent/" + objPath;
 	var specificXml = '<!DOCTYPE node PUBLIC "-//freedesktop//DTD D-BUS Object Introspection 1.0//EN"\n"http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd">\n<node><interface name="org.neard.NDEFAgent"><method name="GetNDEF"><arg name="values" type="a{sv}" direction="in"/></method><method name="Release"></method></interface></node>';	
-	cloudeebus.Agent.call(this, srvDbusName, objPath, jsHdl, specificXml);
+	cloudeebus.Agent.call(this, objPath, jsHdl, specificXml);
 	
 	this.registered = false;
 	this.tagType = tagType;
@@ -106,7 +106,7 @@ neardService.registerNdefAgent = function(tagType, parsingFunc) {
 			    }
 			}
         };
-		var ndefAgent = new NDEFAgent(neardService.name, tagType, NdefAgentHandler);
+		var ndefAgent = new NDEFAgent(tagType, NdefAgentHandler);
 
 		function NeardNDEFAgentRegisteredSuccessCB() {
 			ndefAgent.registered = true;
