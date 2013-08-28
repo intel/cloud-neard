@@ -29,8 +29,8 @@ var dbus = { // hook object for dbus types not translated by python-json
 /*****************************************************************************/
 
 var cloudeebus = window.cloudeebus = {
-		version: "0.5.1",
-		minVersion: "0.3.2"
+		version: "0.6.0",
+		minVersion: "0.6.0"
 };
 
 cloudeebus.reset = function() {
@@ -44,6 +44,21 @@ cloudeebus.reset = function() {
 cloudeebus.log = function(msg) { 
 };
 
+cloudeebus.getError = function(error) {
+	if (error.desc && error.uri)
+		return error.desc + " : " + error.uri; // Python exception (cloudeebus.py)
+	if (error.desc)
+		return error.desc;
+	if (error.uri)
+		return error.uri;
+	if (error.name && error.message)
+		return error.name + " : " + error.message; // Javascript exception
+	if (error.message)
+		return error.message;
+	if (error.name)
+		return error.name;
+	return error; // Autobahn error
+};
 
 cloudeebus.versionCheck = function(version) {
 	var ver = version.split(".");
@@ -76,9 +91,10 @@ cloudeebus.connect = function(uri, manifest, successCB, errorCB) {
 	}
 	
 	function onWAMPSessionAuthErrorCB(error) {
-		cloudeebus.log("Authentication error: " + error.desc);
+		var errorStr = cloudeebus.getError(error);
+		cloudeebus.log("Authentication error: " + errorStr);
 		if (errorCB)
-			errorCB(error.desc);
+			errorCB(errorStr);
 	}
 	
 	function onWAMPSessionAuthenticatedCB(permissions) {
@@ -97,7 +113,8 @@ cloudeebus.connect = function(uri, manifest, successCB, errorCB) {
 		if (manifest)
 			cloudeebus.wampSession.authreq(
 					manifest.name, 
-					{permissions: manifest.permissions}
+					{permissions: manifest.permissions, 
+						 services: manifest.services}
 				).then(onWAMPSessionChallengedCB, onWAMPSessionAuthErrorCB);
 		else
 			cloudeebus.wampSession.authreq().then(function() {
@@ -148,6 +165,285 @@ cloudeebus.BusConnection.prototype.getObject = function(busName, objectPath, int
 };
 
 
+cloudeebus.BusConnection.prototype.addService = function(serviceName) {
+	var self = this;
+
+	var promise = new cloudeebus.Promise(function (resolver) {
+		var cloudeebusService = new cloudeebus.Service(self.wampSession, self, serviceName);
+	
+		function ServiceAddedSuccessCB(serviceName) {
+			cloudeebusService.isCreated = true;
+			resolver.fulfill(cloudeebusService, true);
+		}
+		
+		function ServiceAddedErrorCB(error) {
+			var errorStr = cloudeebus.getError(error);
+			cloudeebus.log("Error adding service method: " + self.name + ", error: " + errorStr);
+			resolver.reject(errorStr, true);
+		}
+
+		var arglist = [
+		    self.name,
+		    serviceName
+		    ];
+
+		// call dbusSend with bus type, destination, object, message and arguments
+		self.wampSession.call("serviceAdd", arglist).then(ServiceAddedSuccessCB, ServiceAddedErrorCB);
+	});
+	
+	return promise;
+};
+
+
+
+/*****************************************************************************/
+
+cloudeebus.Agent = function(objectPath, handler, xml) {
+	this.xml = xml;
+	this.objectPath = objectPath;
+	this.handler = handler;
+	return this;
+};
+
+
+cloudeebus.Service = function(session, busConnection, name) {
+	this.wampSession = session;
+	this.busConnection = busConnection; 
+	this.name = name;
+	this.agents = [];
+	this.isCreated = false;
+	return this;
+};
+
+
+cloudeebus.Service.prototype.remove = function() {
+	var self = this;
+	
+	var promise = new cloudeebus.Promise(function (resolver) {
+		function ServiceRemovedSuccessCB(serviceName) {
+			resolver.fulfill(serviceName, true);
+		}
+		
+		function ServiceRemovedErrorCB(error) {
+			var errorStr = cloudeebus.getError(error);
+			resolver.reject(errorStr, true);
+		}
+		
+		var arglist = [
+		    self.name
+		    ];
+	
+		// call dbusSend with bus type, destination, object, message and arguments
+		self.wampSession.call("serviceRelease", arglist).then(ServiceRemovedSuccessCB, ServiceRemovedErrorCB);
+	});
+	
+	return promise;
+};
+
+
+cloudeebus.Service.prototype._searchMethod = function(ifName, method, objectJS) {
+
+	var funcToCall = null;
+	
+	// Check if 'objectJS' has a member 'interfaceProxies' with an interface named 'ifName' 
+	// and a method named 'method'
+	if (objectJS.interfaceProxies && objectJS.interfaceProxies[ifName] &&
+		objectJS.interfaceProxies[ifName][method]) {
+		funcToCall = objectJS.interfaceProxies[ifName][method];
+	} else {
+		// retrieve the method directly from 'root' of objectJs
+		funcToCall = objectJS[method];
+	}
+
+	return funcToCall;
+};
+
+
+cloudeebus.Service.prototype._addMethod = function(ifName, method, agent) {
+
+	var service = this;
+	var methodId = this.name + "#" + agent.objectPath + "#" + ifName + "#" + method;
+	var funcToCall = this._searchMethod(ifName, method, agent.handler);
+
+	if (funcToCall == null)
+		cloudeebus.log("Method " + method + " doesn't exist in Javascript object");
+	else {
+		agent.handler.wrapperFunc[method] = function() {
+			var result;
+			var methodId = arguments[0];
+			var callDict = {};
+			// affectation of callDict in eval, otherwise dictionary(='{}') interpreted as block of code by eval
+			eval("callDict = " + arguments[1]);
+			try {
+				result = funcToCall.apply(agent.handler, callDict.args);
+				service._returnMethod(methodId, callDict.callIndex, true, result);
+			}
+			catch (e) {
+				var errorStr = cloudeebus.getError(e);
+				cloudeebus.log("Method " + ifName + "." + method + " call on " + agent.objectPath + " exception: " + errorStr);
+				service._returnMethod(methodId, callDict.callIndex, false, errorStr);
+			}
+		};
+		agent.handler.methodId[agent.objectPath].push(methodId);
+		this.wampSession.subscribe(methodId, agent.handler.wrapperFunc[method]);
+	}
+};
+
+
+cloudeebus.Service.prototype._addSignal = function(ifName, signal, agent) {
+	var service = this;
+
+	if (agent.handler[signal])
+		cloudeebus.log("Signal '" + signal + "' emitter already implemented");
+	else {
+		agent.handler[signal] = function() {
+			var args = [];
+			for (var i=0; i < arguments.length; i++ )
+				args.push(arguments[i]);
+			service._emitSignal(agent.objectPath, signal, args);
+		};
+	}
+};
+
+
+cloudeebus.Service.prototype._createWrapper = function(agent) {
+	var self = this;
+	var parser = new DOMParser();
+	var xmlDoc = parser.parseFromString(agent.xml, "text/xml");
+	var ifXml = xmlDoc.getElementsByTagName("interface");
+	agent.handler.wrapperFunc = {};
+	agent.handler.methodId = {};
+	agent.handler.methodId[agent.objectPath] = [];
+	for (var i=0; i < ifXml.length; i++) {
+		var ifName = ifXml[i].attributes.getNamedItem("name").value;
+		var ifChild = ifXml[i].firstChild;
+		while (ifChild) {
+			if (ifChild.nodeName == "method") {
+				var metName = ifChild.attributes.getNamedItem("name").value;
+				self._addMethod(ifName, metName, agent);
+			}
+			if (ifChild.nodeName == "signal") {
+				var metName = ifChild.attributes.getNamedItem("name").value;
+				self._addSignal(ifName, metName, agent);
+			}
+			ifChild = ifChild.nextSibling;
+		}
+	}
+};
+
+
+cloudeebus.Service.prototype.addAgent = function(agent) {
+	var self = this;
+	
+	var promise = new cloudeebus.Promise(function (resolver) {
+		function ServiceAddAgentSuccessCB(objPath) {
+			self.agents.push(agent);
+			try {
+				self._createWrapper(agent);
+			}
+			catch (e) {
+				var errorStr = cloudeebus.getError(e);
+				cloudeebus.log("Exception creating agent wrapper " + agent.objectPath + " : " + errorStr);
+				resolver.reject(errorStr, true);
+				return;
+			}		
+			resolver.fulfill(objPath, true);
+		}
+		
+		function ServiceAddAgenterrorCB(error) {
+			var errorStr = cloudeebus.getError(error);
+			cloudeebus.log("Error adding agent : " + agent.objectPath + ", error: " + errorStr);
+			resolver.reject(errorStr, true);
+		}
+		
+		var arglist = [
+		    self.name,
+		    agent.objectPath,
+		    agent.xml
+		    ];
+	
+		// call dbusSend with bus type, destination, object, message and arguments
+		self.wampSession.call("serviceAddAgent", arglist).then(ServiceAddAgentSuccessCB, ServiceAddAgenterrorCB);
+	});
+	
+	return promise;
+};
+
+
+cloudeebus.Service.prototype._deleteWrapper = function(agent) {
+	var objJs = agent.handler;
+	if (objJs.methodId[agent.objectPath]) {
+		while (objJs.methodId[agent.objectPath].length) {
+			try {
+				this.wampSession.unsubscribe( objJs.methodId[agent.objectPath].pop() );
+			}
+			catch (e) {
+				cloudeebus.log("Unsubscribe error: " + cloudeebus.getError(e));
+			}
+		}
+		objJs.methodId[agent.objectPath] = null;
+	}
+};
+
+
+cloudeebus.Service.prototype.removeAgent = function(rmAgent) {
+	var self = this;
+	
+	var promise = new cloudeebus.Promise(function (resolver) {
+		function ServiceRemoveAgentSuccessCB(objectPath) {
+			// Searching agent in list
+			for (var idx in self.agents)
+				if (self.agents[idx].objectPath == objectPath) {
+					agent = self.agents[idx];
+					break;
+				}
+					
+			self.agents.splice(idx, 1);
+			self._deleteWrapper(agent);
+			resolver.fulfill(agent, true);
+		}
+
+		function ServiceRemoveAgentErrorCB(error) {
+			var errorStr = cloudeebus.getError(error);
+			cloudeebus.log("Error removing agent : " + rmAgent.objectPath + ", error: " + errorStr);
+			resolver.reject(errorStr, true);
+		}
+
+		var arglist = [
+		    rmAgent.objectPath
+		    ];
+	
+		// call dbusSend with bus type, destination, object, message and arguments
+		self.wampSession.call("serviceDelAgent", arglist).then(ServiceRemoveAgentSuccessCB, ServiceRemoveAgentErrorCB);
+	});
+	
+	return promise;
+};
+
+
+cloudeebus.Service.prototype._returnMethod = function(methodId, callIndex, success, result, successCB, errorCB) {
+	var arglist = [
+	    methodId,
+	    callIndex,
+	    success,
+	    result
+	    ];
+
+	this.wampSession.call("returnMethod", arglist).then(successCB, errorCB);
+};
+
+
+cloudeebus.Service.prototype._emitSignal = function(objectPath, signalName, args, successCB, errorCB) {
+	var arglist = [
+	    objectPath,
+	    signalName,
+	    JSON.stringify(args)
+	    ];
+
+	this.wampSession.call("emitSignal", arglist).then(successCB, errorCB);
+};
+
+
 
 /*****************************************************************************/
 
@@ -194,7 +490,7 @@ cloudeebus.PromiseResolver.prototype.resolve = function(value, sync) {
 			then.apply(value, [fulfillCallback, rejectCallback]);
 		}
 		catch (e) {
-			this.reject(e, true);
+			this.reject(cloudeebus.getError(e), true);
 		}
 	}
 	
@@ -248,7 +544,7 @@ cloudeebus.Promise = function(init) {
 			init.apply(this, [this.resolver]);
 		}
 		catch (e) {
-			this.resolver.reject(e, true);
+			this.resolver.reject(cloudeebus.getError(e), true);
 		}
 	}
     return this;
@@ -279,7 +575,7 @@ cloudeebus.Promise.prototype.then = function(fulfillCB, rejectCB) {
 				resolver.resolve(value, true);
 			}
 			catch (e) {
-				resolver.reject(e, true);
+				resolver.reject(cloudeebus.getError(e), true);
 			}
 		};
 	else
@@ -294,7 +590,7 @@ cloudeebus.Promise.prototype.then = function(fulfillCB, rejectCB) {
 				resolver.resolve(value, true);
 			}
 			catch (e) {
-				resolver.reject(e, true);
+				resolver.reject(cloudeebus.getError(e), true);
 			}
 		};
 	else
@@ -351,7 +647,7 @@ cloudeebus.Promise.any = function() {
 		resolver.resolve(undefined, true);
 	else
 		for (i in arguments) 
-			Promise.resolve(arguments[i]).appendWrappers(fulfillCallback,rejectCallback);
+			cloudeebus.Promise.resolve(arguments[i]).appendWrappers(fulfillCallback,rejectCallback);
 	return promise;
 };
 
@@ -376,7 +672,7 @@ cloudeebus.Promise.every = function() {
 					resolver.resolve(args, true);
 			};
 			index++;
-			Promise.resolve(arguments[i]).appendWrappers(fulfillCallback,rejectCallback);
+			cloudeebus.Promise.resolve(arguments[i]).appendWrappers(fulfillCallback,rejectCallback);
 		}
 	
 	return promise;
@@ -403,7 +699,7 @@ cloudeebus.Promise.some = function() {
 					resolver.reject(args, true);
 			};
 			index++;
-			Promise.resolve(arguments[i]).appendWrappers(fulfillCallback,rejectCallback);
+			cloudeebus.Promise.resolve(arguments[i]).appendWrappers(fulfillCallback,rejectCallback);
 		}
 	
 	return promise;
@@ -419,6 +715,7 @@ cloudeebus.ProxyObject = function(session, busConnection, busName, objectPath) {
 	this.busName = busName; 
 	this.objectPath = objectPath; 
 	this.interfaceProxies = {};
+	this.childNodeNames = [];
 	return this;
 };
 
@@ -456,6 +753,10 @@ cloudeebus.ProxyObject.prototype._introspect = function(successCB, errorCB) {
 	function introspectSuccessCB(str) {
 		var parser = new DOMParser();
 		var xmlDoc = parser.parseFromString(str, "text/xml");
+		var nodes = xmlDoc.getElementsByTagName("node");
+		// first node is the parent/head node
+		for(var i=1; i < nodes.length; i++)
+			self.childNodeNames.push(nodes[i].getAttribute("name"));
 		var interfaces = xmlDoc.getElementsByTagName("interface");
 		self.propInterfaces = [];
 		var supportDBusProperties = false;
@@ -534,14 +835,16 @@ cloudeebus.ProxyObject.prototype.callMethod = function(ifName, method, args, sig
 				resolver.fulfill(result[0], true);
 			}
 			catch (e) {
-				cloudeebus.log("Method callback exception: " + e);
-				resolver.reject(e, true);
+				var errorStr = cloudeebus.getError(e);
+				cloudeebus.log("Method callback exception: " + errorStr);
+				resolver.reject(errorStr, true);
 			}
 		}
 
 		function callMethodErrorCB(error) {
-			cloudeebus.log("Error calling method: " + method + " on object: " + self.objectPath + " : " + error.desc);
-			resolver.reject(error.desc, true);
+			var errorStr = cloudeebus.getError(error);
+			cloudeebus.log("Error calling method: " + method + " on object: " + self.objectPath + " : " + errorStr);
+			resolver.reject(errorStr, true);
 		}
 
 		var arglist = [
@@ -571,9 +874,10 @@ cloudeebus.ProxyObject.prototype.connectToSignal = function(ifName, signal, hand
 				handlerCB.apply(self, eval(data));
 			}
 			catch (e) {
-				cloudeebus.log("Signal handler exception: " + e);
+				var errorStr = cloudeebus.getError(e);
+				cloudeebus.log("Signal handler exception: " + errorStr);
 				if (errorCB)
-					errorCB(e);
+					errorCB(errorStr);
 			}
 		}
 	}
@@ -583,14 +887,15 @@ cloudeebus.ProxyObject.prototype.connectToSignal = function(ifName, signal, hand
 			self.wampSession.subscribe(str, signalHandler);
 		}
 		catch (e) {
-			cloudeebus.log("Subscribe error: " + e);
+			cloudeebus.log("Subscribe error: " + cloudeebus.getError(e));
 		}
 	}
 
 	function connectToSignalErrorCB(error) {
-		cloudeebus.log("Error connecting to signal: " + signal + " on object: " + self.objectPath + " : " + error.desc);
+		var errorStr = cloudeebus.getError(error);
+		cloudeebus.log("Error connecting to signal: " + signal + " on object: " + self.objectPath + " : " + errorStr);
 		if (errorCB)
-			errorCB(error.desc);
+			errorCB(errorStr);
 	}
 
 	var arglist = [
@@ -611,6 +916,6 @@ cloudeebus.ProxyObject.prototype.disconnectSignal = function(ifName, signal) {
 		this.wampSession.unsubscribe(this.busConnection.name + "#" + this.busName + "#" + this.objectPath + "#" + ifName + "#" + signal);
 	}
 	catch (e) {
-		cloudeebus.log("Unsubscribe error: " + e);
+		cloudeebus.log("Unsubscribe error: " + cloudeebus.getError(e));
 	}
 };
