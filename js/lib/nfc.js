@@ -60,12 +60,12 @@ nfc._NDEFMessageForRecordIds = function(ids) {
 		for (var i=0; i<ids.length; i++) {
 			var recProxy = nfc._bus.getObject(nfc._busName, ids[i]);
 			recProxy.callMethod("org.neard.Record", "GetProperties", 
-					[]).then(onRecPropsOk, function(err) {resolver.reject(err,true)});
+					[]).then(onRecPropsOk, function(err) {resolver.reject(err,true);});
 		}
 	});
 	
 	return promise;
-}
+};
 
 
 
