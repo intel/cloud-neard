@@ -26,21 +26,22 @@
 
 	// NDEF Message log
     function logRecord(rec) {
-		if (rec.text)
-			outLog.innerHTML += "<li>" + rec.text + " ("
+		outLog.innerHTML += "<dt>" + rec.recordType;
+		if (rec.recordType == "text")
+			outLog.innerHTML += "<dd>" + rec.text + " ("
 			+ rec.encoding + " / "
-			+ rec.languageCode + ")</li>";
-		else if (rec.uri)
-			outLog.innerHTML += "<li><a href='" + rec.uri + "'>"
-					+ rec.uri + "</a></li>";
+			+ rec.languageCode + ")";
+		else if (rec.recordType == "uri" || rec.recordType == "smartPoster")
+			outLog.innerHTML += "<dd><a href='" + rec.uri + "'>"
+					+ rec.uri + "</a>";
     }
 
     function logMessage(msg) {
-		outLog.innerHTML +=  "<ul>";
+		outLog.innerHTML +=  "<dl>";
 		for (var index=0; index < msg.records.length; index++) {
 			logRecord(msg.records[index]);
 		}
-		outLog.innerHTML += "</ul>";
+		outLog.innerHTML += "</dl>";
 	}
    
     // NFC Tag read callback
