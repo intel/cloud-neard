@@ -60,12 +60,12 @@ nfc._NDEFMessageForRecordIds = function(ids) {
 		for (var i=0; i<ids.length; i++) {
 			var recProxy = nfc._bus.getObject(nfc._busName, ids[i]);
 			recProxy.callMethod("org.neard.Record", "GetProperties", 
-					[]).then(onRecPropsOk, function(err) {resolver.reject(err,true)});
+					[]).then(onRecPropsOk, function(err) {resolver.reject(err,true);});
 		}
 	});
 	
 	return promise;
-}
+};
 
 
 
@@ -204,8 +204,8 @@ nfc._init = function(uri, manifest) {
 		}
 		
 		function onerror(error) {
-			cloudeebus.log("NFC init error: " + error.desc);
-			resolver.reject(error.desc, true);			
+			cloudeebus.log("NFC init error: " + error);
+			resolver.reject(error, true);			
 		}
 		
 		cloudeebus.connect(uri, manifest, onConnectOk, onerror);
@@ -323,6 +323,7 @@ NDEFMessage.prototype.constructor = NDEFMessage;
 /*****************************************************************************/
 
 nfc.NDEFRecord = function(props) {
+	this.recordType = "unknown";
 	return this;
 };
 
@@ -337,6 +338,7 @@ nfc.NDEFRecord.prototype.neardRecord = function() {
 
 nfc.NDEFRecordText = function(props) {
 	nfc.NDEFRecord.call(this,props);
+	this.recordType = "text";
 	if (props) {
 		this.text = props.Representation;
 		this.languageCode = props.Language;
@@ -376,6 +378,7 @@ NDEFRecordText.prototype.constructor = NDEFRecordText;
 
 nfc.NDEFRecordURI = function(props) {
 	nfc.NDEFRecord.call(this,props);
+	this.recordType = "uri";
 	if (props) {
 		this.uri = props.URI;
 	}
