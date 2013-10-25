@@ -14,8 +14,8 @@
 		nfc.onpollstop = function(event) {
 			document.tagManagement.tagListener.selectedIndex=0;
 		};
-		// initial state with tag reading disabled
-		nfcListen(false);
+		// power on, tag reading disabled
+		nfc.powerOn().then(function(){nfcListen(false);},function(){nfcListen(false);});
 	}
 	
 	function clearResults() {
