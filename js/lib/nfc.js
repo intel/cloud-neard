@@ -219,12 +219,12 @@ nfc._init = function(uri, manifest) {
 /*****************************************************************************/
 
 nfc.powerOn = function() {
-	return nfc._adapter.SetProperty("Powered", 1).then(function(){nfc.powered=true;});
+	return nfc._adapter.SetProperty("Powered", true).then(function(){nfc.powered=true;});
 };
 
 
 nfc.powerOff = function() {
-	return nfc._adapter.SetProperty("Powered", 0).then(function(){nfc.powered=false;});
+	return nfc._adapter.SetProperty("Powered", false).then(function(){nfc.powered=false;});
 };
 
 
